@@ -14,16 +14,19 @@ RUN yarn install --ignore-scripts --frozen-lockfile 2>/dev/null || npm ci --igno
 # Copy source code
 COPY . .
 
-# Build static export for web
-RUN EXPO_DEBUG=false CI=true NODE_ENV=production yarn exec -- expo export --platform web --clear
+# Build static export for web - use npx directly instead of npm script
+RUN EXPO_DEBUG=false CI=true NODE_ENV=production npx expo export --platform web --clear
 
 # Runtime stage
 FROM node:24-alpine
 
 WORKDIR /app
 
-# Install only express via npm (no preinstall hook)
-RUN npm init -y && npm install --production express
+# Create minimal package.json for express only
+RUN echo '{"name":"frontend-server","version":"1.0.0","scripts":{"start":"node server.js"},"dependencies":{"express":"^4.18.2"}}' > package.json
+
+# Install only express
+RUN npm install --production && npm cache clean --force
 
 # Copy dist folder from builder
 COPY --from=builder /app/dist ./dist
