@@ -2,17 +2,17 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# Copy everything first
+# Copy everything
 COPY . .
 
-# Copy scripts before install
-COPY scripts ./scripts
+# Remove the preinstall script from package.json temporarily
+RUN sed -i 's/"preinstall":[^,}]*,\?//' package.json
 
-# Install with ignore-scripts to skip preinstall
-RUN yarn install --ignore-scripts --frozen-lockfile || npm ci --ignore-scripts || true
+# Install with npm (more reliable with --ignore-scripts)
+RUN npm install --ignore-scripts --legacy-peer-deps --no-audit --no-fund 2>&1
 
-# Export to static web files
-RUN npx --yes expo export --platform web --clear || echo "Export completed"
+# Now build the static export
+RUN npx expo export --platform web --clear 2>&1
 
 # Runtime - minimal Express server
 FROM node:24-alpine
@@ -23,10 +23,10 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 
 # Create simple server
-RUN echo "const express = require('express'); const path = require('path'); const app = express(); app.use(express.static(path.join(__dirname, 'dist'))); app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html'))); app.listen(process.env.PORT || 8082, '0.0.0.0', () => console.log('Server running on port ' + (process.env.PORT || 8082)));" > server.js
+RUN echo "const express = require('express'); const path = require('path'); const app = express(); app.use(express.static(path.join(__dirname, 'dist'))); app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html'))); const port = process.env.PORT || 8082; app.listen(port, '0.0.0.0', () => console.log('Server running on port ' + port));" > server.js
 
-# Install express
-RUN npm install express
+# Install express only
+RUN npm init -y && npm install --production express --legacy-peer-deps
 
 EXPOSE 8082
 
