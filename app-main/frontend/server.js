@@ -9,18 +9,39 @@ const indexPath = path.join(distPath, 'index.html');
 console.log('[INFO] Starting server...');
 console.log('[INFO] Dist path:', distPath);
 console.log('[INFO] Dist exists:', fs.existsSync(distPath));
+
+if (fs.existsSync(distPath)) {
+  const files = fs.readdirSync(distPath);
+  console.log('[INFO] Files in dist:', files.slice(0, 10));
+}
+
 console.log('[INFO] Index.html exists:', fs.existsSync(indexPath));
 
-// Serve static files
-app.use(express.static(distPath));
+// Serve static files with error handling
+app.use(express.static(distPath, {
+  index: false // Don't auto-serve index.html
+}));
 
-// Catch-all route for SPA - use regex instead of wildcard
-app.get(/.*/, (req, res) => {
-  console.log('[LOG] Request to:', req.path);
+// Health check
+app.get('/_health', (req, res) => {
+  res.json({ status: 'ok', distExists: fs.existsSync(distPath), indexExists: fs.existsSync(indexPath) });
+});
+
+// Catch-all route for SPA
+app.use((req, res, next) => {
+  console.log('[LOG] Request:', req.method, req.path);
+  
   if (fs.existsSync(indexPath)) {
+    console.log('[LOG] Sending index.html');
     res.sendFile(indexPath);
   } else {
-    res.status(404).send('index.html not found');
+    console.log('[ERROR] index.html not found at:', indexPath);
+    res.status(500).json({ 
+      error: 'index.html not found',
+      distPath,
+      distExists: fs.existsSync(distPath),
+      distFiles: fs.existsSync(distPath) ? fs.readdirSync(distPath).slice(0, 10) : []
+    });
   }
 });
 
