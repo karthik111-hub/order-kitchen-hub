@@ -25,20 +25,14 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-# Install bash
-RUN apk add --no-cache bash
-
-# Copy package.json for express dependency
-COPY --from=builder /app/package.json ./
-
-# Install only express for serving static files
-RUN yarn add express && yarn cache clean
+# Install only express via npm (no preinstall hook)
+RUN npm init -y && npm install --production express
 
 # Copy dist folder from builder
 COPY --from=builder /app/dist ./dist
 
 # Copy server script
-COPY server.js ./
+COPY frontend/server.js ./
 
 EXPOSE 8082
 
