@@ -1,0 +1,53 @@
+{
+  "summary": "ServeSync iteration 4 tested. BACKEND — 17/17 iteration-4 pytest cases pass in /app/backend/tests/test_iteration4.py (+ prior 22/22 iteration-3 still green): PATCH /api/orders/{id}/status accepts status='cancelled' from both 'pending' and 'preparing', persists to Mongo, cancelled order still fetchable via GET /api/orders/{id} and appears in GET /api/orders?status=cancelled; status='foobar' → 422; unknown order → 404; pending→preparing→completed lifecycle regression still works; auth (admin/master/chef passwords), categories, menu, orders listing, order-id format (YYYYMMDD-HHMMSS-XXXXXXXX 8-hex) and unpaid default all still work. FRONTEND STRUCTURE (all testIDs correct + UI renders): (a) Chef tab bar has Dashboard | Pending | Preparing | Completed with Dashboard as default landing tab (testID chef-tab-dashboard). (b) Chef Dashboard shows 'Kitchen Board' title, '{preparing} preparing · {pending} pending' subtitle, legend pills for Preparing (brand tertiary) and Pending (warning), 'Total items: N' counter, and either the empty state 'Board is empty' or the horizontally-scrollable matrix (testID dashboard-matrix). Matrix column headers display short id '#XXXXXXXX' + T-{table} sub-line, last column is brand-background 'Total', row totals equal sum-of-qty across visible orders (verified: Paneer Tikka row totals = 2+1 = 3 across two visible order columns). (c) Master Orders filter chips all 5 present: orders-filter-all/pending/preparing/completed/cancelled. Cancel link testIDs render only on pending & preparing cards (0 links on completed filter, confirmed). Completed and cancelled cards do NOT render the cancel link. CRITICAL WEB-PREVIEW ISSUE: `Alert.alert(title, msg, buttons)` is a no-op on react-native-web 0.21 (the library used here). Clicking the Cancel link on either the Master orders card (`cancel-order-link-{id}`) or the Chef ticket card (`cancel-ticket-link-{id}`) does NOT open any confirm dialog and does NOT call PATCH /api/orders/{id}/status — verified by pointerdown+mousedown+click event dispatch AND with playwright's dialog handler (0 dialogs captured, /api/orders?status=cancelled count unchanged). On native iOS/Android Alert.alert works, so this is a WEB-ONLY functional break of iteration-4 cancel feature. Deprecated packages: none. Carry-over RN Web warnings: 'shadow*' style props (theme.ts) and 'props.pointerEvents' (master/index.tsx) still logged (non-blocking).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Cancel order/ticket confirmation (both Master orders & Chef tickets)",
+        "issue": "Alert.alert(title, msg, [Keep, Cancel Order]) is a NO-OP on react-native-web 0.21. Confirming 'Cancel' never fires the destructive onPress → PATCH /api/orders/{id}/status is never called → order stays pending on web preview. Verified: 0 dialogs opened, backend /api/orders?status=cancelled count unchanged after clicking cancel link. Works fine on native iOS/Android. Fix: replace Alert.alert with a cross-platform confirm — e.g. Platform.OS === 'web' ? (window.confirm(msg) && onConfirm()) : Alert.alert(...) — or use a custom Modal component. Affected files: /app/frontend/src/components/TicketList.tsx:95-108 (cancelTicket), /app/frontend/app/master/orders.tsx:78-103 (cancelOrder).",
+        "affected_testIDs": ["cancel-order-link-{orderId}", "cancel-ticket-link-{orderId}"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "src/components/TicketList.tsx & app/master/orders.tsx", "issue": "Alert.alert with button callbacks is a no-op on react-native-web 0.21. Use a Platform-branched confirm (window.confirm on web, Alert.alert on native) or a custom Modal. Reference: /app/frontend/src/components/TicketList.tsx:95, /app/frontend/app/master/orders.tsx:78"},
+      {"component": "app/master/index.tsx", "issue": "(carry-over from iter 2/3) uses `pointerEvents=\"box-none\"` prop — deprecated on RN Web. Reference: /app/frontend/app/master/index.tsx:364. Move to style.pointerEvents."},
+      {"component": "src/theme.ts", "issue": "(carry-over) 'shadow*' style props deprecated on RN Web — migrate to boxShadow. Reference: /app/frontend/src/theme.ts"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/backend/tests/test_iteration3.py",
+    "/app/backend/tests/test_servesync.py",
+    "/app/test_reports/pytest/iteration4.xml"
+  ],
+  "action_items": [
+    "[HIGH] Replace `Alert.alert` cancel-confirmation in /app/frontend/src/components/TicketList.tsx (cancelTicket) and /app/frontend/app/master/orders.tsx (cancelOrder) with a cross-platform confirm. Simple fix: `import { Platform } from 'react-native';` then `const ok = Platform.OS === 'web' ? window.confirm('Cancel order?') : await new Promise(res => Alert.alert('Cancel order?','...',[{text:'Keep',onPress:()=>res(false),style:'cancel'},{text:'Cancel Order',onPress:()=>res(true),style:'destructive'}]));`. Iteration-4 cancel feature is UNUSABLE on web preview until this is fixed. Native iOS/Android works today.",
+    "[NIT carry-over] Migrate `pointerEvents` prop → style.pointerEvents in /app/frontend/app/master/index.tsx line 364.",
+    "[NIT carry-over] Migrate `shadow.*` styles → `boxShadow` in /app/frontend/src/theme.ts for RN Web parity."
+  ],
+  "critical_code_review_comments": [
+    "server.py Order model: status Literal now includes 'cancelled' (line 95) and OrderStatusUpdate mirrors it (line 111). Correct — Pydantic will 422 on any other value.",
+    "chef/index.tsx buildMatrix(): correctly aggregates qty per (item, order), computes row totals and grandTotal. Preparing orders sorted before pending (both oldest-first inside each) — matches spec 'preparing first then pending'.",
+    "master/orders.tsx cancelOrder: does an optimistic UI update (setOrders → status='cancelled') BEFORE api.updateStatus completes. If API fails it restores via load() — good UX pattern, but on error it also shows Alert.alert('Failed to cancel') which itself is a no-op on web, so the user sees the reverted card with no error toast on web. Consider adding an inline error banner instead.",
+    "TicketList.tsx cancelTicket: does NOT do an optimistic remove (relies solely on Alert.alert callback → api.updateStatus → next load()). Given Alert.alert is a no-op on web, the click is a complete no-op — no visual feedback whatsoever. Even after fix, consider optimistic UI here too.",
+    "chef/_layout.tsx: Dashboard is first tab (index route), correct default landing. tabBarButtonTestID='chef-tab-dashboard' is correctly wired.",
+    "master/orders.tsx: FILTERS array includes 'cancelled' chip → uses same statusStyle switch which returns {bg:'#FFE5E3', fg:colors.error} — the red CANCELLED pill spec is met."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/test_reports/iteration_4.json",
+    "/app/test_reports/pytest/iteration4.xml"
+  ],
+  "success_rate": {"backend": "100% (17/17 iteration-4 + 22/22 iteration-3 regression)", "frontend": "80% — all UI structure/testIDs/dashboard matrix/filter chips verified; cancel-confirm flow broken on web preview only (works on native)"},
+  "seed_data_creation": "Playwright test seeded ~5 pending orders (table_number 'UI-T1', 'UI-T2', 'UI-T3', 'DIAG') via POST /api/orders during automation. Pytest seeded ~10 orders (T-C1..T-C5, T-LIFE, T-FMT). These are small and harmless — cancellation status was applied to several. No cleanup performed.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 4 cancel feature: backend fully verified (test_iteration4.py, 17 cases). Web preview cancel-link behavior is blocked by react-native-web Alert.alert being a no-op — after main agent replaces Alert.alert with Platform-branched confirm (or custom Modal), rerun the frontend flow: seed order → chef pending → click cancel-ticket-link → confirm → order should disappear from pending list AND appear in Master orders 'cancelled' filter with red CANCELLED pill. Same test for master cancel-order-link. Testids in place: chef-tab-dashboard, dashboard-matrix, dash-col-{orderId}, dash-row-{itemName}, orders-filter-cancelled, cancel-order-link-{orderId}, cancel-ticket-link-{orderId}, order-card-{orderId}, ticket-{orderId}. Note: password submit button (role-password-submit) sits below viewport on 390×844 — use JS click (document.querySelector(...).click()) instead of page.click().",
+  "rca_of_issue": "RCA — Cancel link no-op on web preview: react-native-web 0.21 does not implement Alert.alert with button callbacks (it silently drops the call). Both cancelTicket (TicketList.tsx:95) and cancelOrder (master/orders.tsx:78) rely on Alert.alert's onPress destructive callback to fire PATCH /api/orders/{id}/status; that callback is never invoked on web. Reproduction: (1) login chef Sari0808 → Pending tab → click 'Cancel' on any ticket → observe (a) no dialog opens, (b) ticket remains, (c) GET /api/orders?status=cancelled count unchanged. Mitigation: use Platform-branched confirm or replace Alert.alert with a custom cross-platform Modal component (see action item #1)."
+}

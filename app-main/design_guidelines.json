@@ -1,0 +1,177 @@
+{
+  "app_name": "ServeSync",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A highly readable, efficient, and tactile interface that gets out of the way, prioritizing speed for front-of-house and clarity for the kitchen.",
+  "color": {
+    "surface": "#F9F9F8",
+    "onSurface": "#1C1C1E",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#1C1C1E",
+    "surfaceTertiary": "#F0F0EE",
+    "onSurfaceTertiary": "#3A3A3C",
+    "surfaceInverse": "#2C2C2E",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#E07A5F",
+    "brandPrimary": "#E07A5F",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#F2CCB6",
+    "onBrandSecondary": "#8A3D26",
+    "brandTertiary": "#F9EAE1",
+    "onBrandTertiary": "#E07A5F",
+    "success": "#34C759",
+    "onSuccess": "#FFFFFF",
+    "warning": "#FF9500",
+    "onWarning": "#FFFFFF",
+    "error": "#FF3B30",
+    "onError": "#FFFFFF",
+    "info": "#1C1C1E",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E5EA",
+    "borderStrong": "#C7C7CC",
+    "divider": "#E5E5EA"
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous padding around content. Clear grouping of related elements. Avoid dense dashboard-style layouts unless the app is data-heavy.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "stack_only",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Sticky headers over scrolling content",
+      "Bottom-sheet headers and drag handles",
+      "Floating action buttons"
+    ],
+    "dont's": [
+      "Form fields",
+      "Body text regions",
+      "Cards in dense lists"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Role Selection",
+      "purpose": "Allow user to select whether they are a Master (Waiter) or Chef.",
+      "states": {
+        "loading": "Centered spinner",
+        "empty": "N/A",
+        "error": "Error loading roles, retry button"
+      },
+      "layout": "Vertical stack centered. Large touch targets (cards) for Master and Chef. Use hero images/icons in the cards. Safe area aware."
+    },
+    {
+      "name": "Master Dashboard (Tabs: Menu, Orders)",
+      "purpose": "Primary hub for Waiter to browse menu, add items to cart, and view order history.",
+      "states": {
+        "loading": "Skeleton list of menu items",
+        "empty": "Illustration of empty table with text 'No items available' and CTA to add items.",
+        "error": "Failed to load menu, retry button"
+      },
+      "layout": "Top custom header. Categorized horizontal chips for filtering. Grid of menu items (2 columns) with image, title, price, and Zomato/Swiggy style stepper (Add / - 1 +). Sticky bottom cart summary (glassmorphism) over scrolling list, revealing total price and 'Place Order' CTA."
+    },
+    {
+      "name": "Cart & Checkout Sheet",
+      "purpose": "Review items, quantities, and place the final order to the kitchen.",
+      "states": {
+        "loading": "Spinner on CTA",
+        "empty": "N/A - shouldn't open if empty",
+        "error": "Toast error 'Failed to place order'"
+      },
+      "layout": "Bottom sheet. List of selected items with steppers. Swipe to delete. Total calculation at bottom. Large sticky primary CTA 'Send to Kitchen'."
+    },
+    {
+      "name": "Chef Kitchen Display (Tabs: Pending, Completed)",
+      "purpose": "Kitchen Display System (KDS) for chefs to see active orders and mark them as complete.",
+      "states": {
+        "loading": "Skeleton cards of tickets",
+        "empty": "Illustration of clean kitchen, 'No pending orders, take a break!'",
+        "error": "Failed to sync orders, retry button"
+      },
+      "layout": "Focus on high visibility. Split view or large vertical list of 'Tickets'. Each ticket is a surfaceSecondary card with order #, time elapsed (color coded for urgency), list of items with modifiers bolded. Entire ticket or large primary button to mark 'Complete'. Large text for readability at arm's length."
+    },
+    {
+      "name": "Menu Management (Master)",
+      "purpose": "Master can add new items to the menu with photo, name, and price.",
+      "states": {
+        "loading": "Spinner on submit",
+        "empty": "N/A",
+        "error": "Error toast on save"
+      },
+      "layout": "Simple form. Image picker at top (rounded square), floating label text inputs for Name, Category, Price. Sticky bottom CTA 'Save Item'."
+    }
+  ],
+  "images": {
+    "role_master": {
+      "url": "https://images.unsplash.com/photo-1622021142947-da7dedc7c39a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwYnVzeSUyMGtpdGNoZW4lMjBjaGVmJTIwY29va2luZ3xlbnwwfHx8fDE3ODQ2MjEyNzJ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Master waiter role"
+    },
+    "role_chef": {
+      "url": "https://images.unsplash.com/photo-1622021142947-da7dedc7c39a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwYnVzeSUyMGtpdGNoZW4lMjBjaGVmJTIwY29va2luZ3xlbnwwfHx8fDE3ODQ2MjEyNzJ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Chef kitchen role"
+    },
+    "menu_burger": {
+      "url": "https://images.unsplash.com/photo-1682377634519-96afd22f3b38?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTZ8MHwxfHNlYXJjaHwyfHxnb3VybWV0JTIwYnVyZ2VyJTIwcGl6emElMjBwYXN0YSUyMG1lYWwlMjBwbGF0ZXxlbnwwfHx8fDE3ODQ2MjEyNzJ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Gourmet burger"
+    },
+    "menu_pizza": {
+      "url": "https://images.unsplash.com/photo-1552580715-4d9bc27f1e2f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTZ8MHwxfHNlYXJjaHwzfHxnb3VybWV0JTIwYnVyZ2VyJTIwcGl6emElMjBwYXN0YSUyMG1lYWwlMjBwbGF0ZXxlbnwwfHx8fDE3ODQ2MjEyNzJ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Pizza and pasta"
+    },
+    "empty_orders": {
+      "url": "https://images.unsplash.com/photo-1780147342156-e7b4d360474f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwxfHxlbXB0eSUyMHJlc3RhdXJhbnQlMjB0YWJsZSUyMG1pbmltYWxpc3R8ZW58MHx8fHwxNzg0NjIxMjcyfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Empty restaurant table"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the color palette. Do not use blue or indigo anywhere.",
+    "Implement the Zomato/Swiggy style stepper component for menu items (Add button transforms into - 1 + on tap).",
+    "For the KDS (Chef View), ensure font sizes for items are large (xl or 2xl) and touch targets (complete button) are massive, as chefs use this with messy hands from a distance.",
+    "Implement a sticky cart summary at the bottom of the Master menu screen when items are in the cart. Use glassmorphism for this sticky container.",
+    "Ensure the Chef view uses real-time or auto-refresh polling (setInterval) to fetch new orders continuously.",
+    "Use Phosphor icons consistently, outlined only."
+  ],
+  "haptics": {
+    "add_to_cart": "light",
+    "increment_stepper": "light",
+    "decrement_stepper": "light",
+    "mark_order_complete": "success",
+    "place_order": "medium"
+  }
+}

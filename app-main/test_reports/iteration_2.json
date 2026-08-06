@@ -1,0 +1,46 @@
+{
+  "summary": "ServeSync iteration 2 tested end-to-end. Backend: 27/27 pytest cases pass (POST /auth/verify for all 3 roles + wrong-password 401 + invalid role 422; categories CRUD incl. duplicate-idempotent, empty-400, cascade-delete-items, 404; menu category-required, invalid tag rejected, category filter, seed items have category+tag; orders lifecycle regression). Frontend: role selection shows 3 cards; wrong Admin password shows 'Incorrect password'; correct password navigates to /admin. Admin has 3 tabs (Categories, Items, Orders), Categories add works & appears in list, Items tab has chips + FAB + bottom-sheet form with photo picker + name + price + tag (None/Must Buy/Most Selling), created item appears immediately with tag pill. Admin Orders shows same orders list with filter chips. Master has only 2 tabs (Menu + Orders) — master-tab-manage is NOT rendered. Master menu is a list view, category chips incl. 'All' visible, MUST BUY and MOST SELLING tag pills render next to item names, ADD → sticky cart → open cart → cart-table-input → place-order-btn navigates to /master/orders. Chef login works, Pending screen shows the freshly placed order with Start Preparing. Deprecated packages detected: none. React Native Web console warnings detected: 'shadow*' style props and 'props.pointerEvents' deprecation (carry-over from iteration 1).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Master Menu list", "issues": ["Items without a real image_base64 all fall back to the same Unsplash placeholder (photo-1504674900247-0877df9cc836). Cosmetic – same finding as iteration 1."]}
+    ],
+    "react_native_issues": [
+      {"component": "master/index.tsx sticky cart View", "issue": "Uses props.pointerEvents='box-none' – deprecated on RN Web (console warning). Reference: /app/frontend/app/master/index.tsx:284. Move to style.pointerEvents."},
+      {"component": "src/theme.ts shadow.*", "issue": "'shadow*' style props are deprecated on RN Web (console warning). Reference: /app/frontend/src/theme.ts. Migrate to boxShadow for web parity."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_servesync.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(NIT) In /app/frontend/app/master/index.tsx line 284, replace `pointerEvents=\"box-none\"` prop with `style={{ pointerEvents: 'box-none' }}` to silence RN Web deprecation warning.",
+    "(NIT) In /app/frontend/src/theme.ts, migrate shadow.* (shadowColor/shadowOffset/shadowOpacity/shadowRadius) usage to `boxShadow` for RN Web parity.",
+    "(LOW) Optional: seed unique placeholder images per item so master menu cards don't all look identical when image_base64 is null."
+  ],
+  "critical_code_review_comments": [
+    "server.py: MenuItemCreate declares `category: str` as required, so missing category returns 422 (pydantic) — acceptable. Empty/whitespace category is separately caught with 400. Good.",
+    "server.py: /auth/verify compares plaintext passwords from env — acceptable for the requested role gate; passwords are never returned to clients. ROLE_PASSWORDS dict is built at import time from env, so backend restart is required after changing .env.",
+    "server.py: `delete_category` cascades correctly (delete_many on menu_items by category name). Note: cascade is by category NAME, not id — if a category is ever renamed in the future, orphan items would result. Not an issue today since categories are immutable in current API.",
+    "server.py cleanly excludes _id via projection={'_id': 0} everywhere.",
+    "admin/items.tsx: uses `mediaTypes: ['images']` (new array API) — correct for latest expo-image-picker (MediaType.Images deprecated in previous SDKs). Good.",
+    "api.ts uses process.env.EXPO_PUBLIC_BACKEND_URL correctly with no fallback."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_servesync.py",
+    "/app/test_reports/iteration_2.json",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "100% (all iteration-2 flows work)"},
+  "seed_data_creation": "Backend pytest created + cleaned up TEST_Desserts, TEST_CASCADE + item, TEST_TaggedItem. UI test created TEST_UI_Cat, TEST_UI_TaggedItem — both cleaned up via API at end of run. No leftover TEST_ data in DB.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 27 pytest tests in /app/backend/tests/test_servesync.py are the current regression suite (covers auth/verify, categories CRUD+cascade, menu with tag+category filter, orders lifecycle). New testIDs added in iteration 2: role-{admin|master|chef}-card, role-password-input, role-password-submit, admin-tab-{categories|items|orders}, cat-name-input, cat-add-btn, cat-row-<id>, cat-delete-<id>, admin-cat-chip-<name>, admin-add-item-fab, admin-item-name-input, admin-item-price-input, admin-pick-image-btn, admin-tag-{none|must-buy|most-selling}, admin-save-item-btn, admin-item-<id>, admin-item-delete-<id>, cat-chip-<name> (master), master-tab-{menu|orders}. Note: submit/save buttons at the bottom of RN Web modals may report 'element outside viewport' with page.click(); use handle.evaluate('el => el.click()') to bypass Playwright's viewport check. This is not a real UI bug — buttons work fine for real users.",
+  "rca_of_issue": "N/A – no functional bugs. Only two RN Web deprecation warnings carried over from iteration 1."
+}

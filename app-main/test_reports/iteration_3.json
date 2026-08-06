@@ -1,0 +1,49 @@
+{
+  "summary": "ServeSync iteration 3 fully tested. Backend: 22/22 pytest cases pass in /app/backend/tests/test_iteration3.py — new order id format YYYYMMDD-HHMMSS-XXXXXXXX (8 uppercase hex) verified + payment_status defaults to 'unpaid'; /api/razorpay/settings/status returns configured=false initially; POST /api/razorpay/settings upserts + returns masked key (first6+****+last4), blank/missing → 400, DELETE clears; /api/razorpay/intent → 503 when not configured, 400 with empty items, 502 when configured with dummy keys (Razorpay call fails or ingress times out — both surface as 502, no order created); /api/razorpay/intent/{id}/finalize — wrong signature → 400 AND intent marked failed AND NO order created (verified via Mongo count), correct HMAC-SHA256(order_id|payment_id, key_secret) → 200, creates paid order with new-format id, records razorpay_order_id+razorpay_payment_id, second call is idempotent; unknown intent → 404; /api/reports/daily.xlsx returns 200 with correct content-type + attachment header + valid xlsx (PK zip magic), ?date=YYYY-MM-DD filters, invalid date → 400, freshly-created order id appears in the sheet. Full regression on auth/categories/menu/orders lifecycle still passes. Frontend: Admin login (MissionImpossible10*) navigates to /admin with 4 tabs including new 'Settings' (admin-tab-settings). Settings screen shows 'Not configured' pill initially; typing Key ID + Key Secret + Save → 'Configured' pill + masked key 'rzp_te****F456' shown. Download today's report button present. Master (Sandy0088) cart modal shows BOTH buttons: primary 'Send Directly to Kitchen' (place-order-btn) which creates an unpaid order and navigates to /master/orders, and secondary 'Pay & Send (UPI / Card)' (pay-and-place-btn) when Razorpay is configured; when keys are cleared the button label switches to 'Payments not configured' and the hint 'Ask the admin to add Razorpay keys in Settings' appears. Master Orders and Chef Pending both display the short 8-char id form '#XXXXXXXX' (23 and 17 matches observed on-screen). Deprecated packages detected: none. Carry-over React Native Web warnings: 'shadow*' style props deprecated and 'props.pointerEvents' deprecated (same as iteration 2 — not blocking).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "master/index.tsx sticky cart View", "issue": "Uses prop `pointerEvents=\"box-none\"` — deprecated on RN Web (console warning). Reference: /app/frontend/app/master/index.tsx:364. Move to style.pointerEvents."},
+      {"component": "src/theme.ts shadow.*", "issue": "'shadow*' style props deprecated on RN Web (console warning). Reference: /app/frontend/src/theme.ts. Migrate to boxShadow for web parity."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration3.py",
+    "/app/backend/tests/test_servesync.py",
+    "/app/test_reports/pytest/iteration3.xml"
+  ],
+  "action_items": [
+    "(NIT, carry-over) In /app/frontend/app/master/index.tsx around line 364, replace `pointerEvents=\"box-none\"` prop with `style={{ pointerEvents: 'box-none' }}` to silence RN Web deprecation warning.",
+    "(NIT, carry-over) In /app/frontend/src/theme.ts, migrate `shadow.*` (shadowColor/Offset/Opacity/Radius) usage to `boxShadow` for RN Web parity.",
+    "(INFO) Bad-Razorpay-keys path currently returns 502 because the request either surfaces the FastAPI 502 or the ingress times out and Cloudflare emits its own 502 HTML page. Both are the correct 'error path only' outcome — no order is ever created. If a faster / more deterministic error is desired, wrap `rzp.order.create` in a short-timeout httpx call so that FastAPI returns before the ingress can time out."
+  ],
+  "critical_code_review_comments": [
+    "server.py: `make_order_id()` uses uuid4().hex[:8].upper() — 32 bits of entropy is fine per second and format matches the spec.",
+    "server.py: `create_order` explicitly hardcodes `payment_status='unpaid'` on the manual path — good, cannot be spoofed by client.",
+    "server.py: `rzp_finalize` uses hmac.compare_digest for constant-time signature comparison — good. On mismatch the intent is marked failed and NO order is inserted (verified by test). Idempotency on 'completed' intent returns existing order_id (verified).",
+    "server.py: Razorpay settings are stored in plaintext in MongoDB (razorpay_settings collection). Acceptable given the single-tenant admin model, but a note-to-main-agent: secrets are visible to anyone with DB access. Consider encrypting `key_secret` at rest in a future iteration.",
+    "server.py: `daily_report` correctly uses `Query(alias='date')` and validates via `date.fromisoformat`, so `?date=` filter works and invalid input returns 400. Uses UTC boundaries [start, start+1day) — consistent with stored `created_at` in UTC ISO.",
+    "server.py: The hosted checkout HTML page embeds `key_id` in the served HTML by design (Razorpay checkout.js needs it client-side); `key_secret` never leaves the server. Good.",
+    "server.py checkout HTML: minor XSS-hardening opportunity — `intent_id` and `razorpay_order_id` are interpolated raw into the HTML. Both are server-controlled (uuid hex / Razorpay id) so not exploitable today, but if this ever accepted user data it would need escaping.",
+    "master/index.tsx: `payAndPlace` opens WebBrowser.openBrowserAsync(intent.checkout_url) then polls `/razorpay/intent/{id}` every 3s + on AppState 'active'. Correct pattern to detect webview return.",
+    "master/index.tsx: `pay-and-place-btn` is correctly disabled via `disabled={paying || placing || !payConfigured}` with opacity 0.55 — matches spec.",
+    "api.ts uses process.env.EXPO_PUBLIC_BACKEND_URL with no fallback (fails fast). Good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration3.py",
+    "/app/test_reports/iteration_3.json",
+    "/app/test_reports/pytest/iteration3.xml"
+  ],
+  "success_rate": {"backend": "100% (22/22 iteration-3 + regression)", "frontend": "100% (all iteration-3 flows verified)"},
+  "seed_data_creation": "Backend tests seeded a few /api/orders (small, harmless) and two payment_intents docs directly in Mongo which were cleaned up in their teardown blocks. Razorpay settings were saved during tests and cleared in test_final_cleanup + a final DELETE from the UI test. No leftover TEST_ / test data expected.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Two pytest suites make up the regression: /app/backend/tests/test_servesync.py (auth/categories/menu/orders base) and /app/backend/tests/test_iteration3.py (order id format, razorpay settings/intent/finalize signature paths, daily xlsx report). New testIDs in this iteration: admin-tab-settings, rzp-status-pill, rzp-key-id-input, rzp-key-secret-input, rzp-save-btn, rzp-clear-btn, download-report-btn, place-order-btn, pay-and-place-btn. Note: the 502 from /api/razorpay/intent with dummy keys can come from either FastAPI or the Cloudflare ingress (timeout) — the test only asserts status_code == 502 to avoid coupling to response body format. Payment finalize signature = HMAC-SHA256(razorpay_order_id + '|' + razorpay_payment_id, key_secret) — the finalize path can be exercised end-to-end without touching real Razorpay by directly seeding a payment_intents doc in Mongo and computing the expected sig, which the tests already do.",
+  "rca_of_issue": "N/A – no functional bugs. Only the two carry-over RN Web deprecation warnings from iteration 2 remain."
+}
