@@ -1,10 +1,17 @@
 #!/bin/bash
 
-# Non-interactive Expo startup for Railway
+set -e
 
-export EXPO_DEBUG=true
+# Non-interactive Expo startup for Railway
+export EXPO_DEBUG=false
 export CI=true
 export NODE_ENV=production
+export EXPO_NO_INTERACTIVE_CLI=true
 
-# Start Expo web server on the specified port
-exec yarn web --port ${PORT:-8082} --host 0.0.0.0
+# Use Railway PORT or default to 8082
+PORT=${PORT:-8082}
+
+echo "Starting Expo web server on port $PORT"
+
+# Start Expo with explicit port
+exec npx expo start --web --port "$PORT" --host 0.0.0.0 --clear

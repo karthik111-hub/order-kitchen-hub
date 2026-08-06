@@ -2,6 +2,9 @@ FROM node:24-alpine
 
 WORKDIR /app
 
+# Install bash for startup script
+RUN apk add --no-cache bash
+
 # Copy package files
 COPY package.json package-lock.json yarn.lock* ./
 
@@ -21,9 +24,9 @@ RUN chmod +x /app/start.sh
 EXPOSE 8082
 
 # Set environment variables for non-interactive mode
-ENV EXPO_DEBUG=true
+ENV EXPO_DEBUG=false
 ENV CI=true
 ENV NODE_ENV=production
 ENV PORT=8082
 
-CMD ["/app/start.sh"]
+CMD ["/bin/bash", "/app/start.sh"]
