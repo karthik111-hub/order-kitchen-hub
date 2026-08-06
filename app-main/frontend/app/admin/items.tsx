@@ -33,6 +33,7 @@ export default function AdminItems() {
   const [loading, setLoading] = useState(true);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
   // form state
   const [name, setName] = useState('');
@@ -70,10 +71,21 @@ export default function AdminItems() {
   );
 
   const openForm = () => {
+    setEditingItem(null);
     setName('');
     setPrice('');
     setImageBase64(null);
     setTag(null);
+    setFormOpen(true);
+  };
+
+  const openEditForm = (item: MenuItem) => {
+    console.log('[DEBUG] Edit button clicked for item:', item.id, item.name);
+    setEditingItem(item);
+    setName(item.name);
+    setPrice(item.price.toString());
+    setImageBase64(item.image_base64 || null);
+    setTag(item.tag || null);
     setFormOpen(true);
   };
 
@@ -111,17 +123,33 @@ export default function AdminItems() {
     }
     try {
       setSaving(true);
-      await api.createMenuItem({
-        name: name.trim(),
-        price: priceNum,
-        category: selectedCat,
-        tag,
-        image_base64: imageBase64,
-      });
+      
+      if (editingItem) {
+        console.log('[DEBUG] Updating item:', editingItem.id);
+        await api.updateMenuItem(editingItem.id, {
+          name: name.trim(),
+          price: priceNum,
+          tag,
+          image_base64: imageBase64,
+        });
+        console.log('[DEBUG] Item updated successfully');
+      } else {
+        console.log('[DEBUG] Creating new item');
+        await api.createMenuItem({
+          name: name.trim(),
+          price: priceNum,
+          category: selectedCat,
+          tag,
+          image_base64: imageBase64,
+        });
+        console.log('[DEBUG] Item created successfully');
+      }
+      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setFormOpen(false);
       load();
     } catch (e: any) {
+      console.error('[DEBUG] Save error:', e);
       Alert.alert('Save failed', e?.message ?? 'Try again');
     } finally {
       setSaving(false);
@@ -246,6 +274,14 @@ export default function AdminItems() {
                     <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
                   </View>
                   <Pressable
+                    testID={`admin-item-edit-${item.id}`}
+                    onPress={() => openEditForm(item)}
+                    style={styles.editBtn}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="pencil-outline" size={14} color={colors.brand} />
+                  </Pressable>
+                  <Pressable
                     testID={`admin-item-delete-${item.id}`}
                     onPress={() => remove(item)}
                     style={styles.deleteBtn}
@@ -286,7 +322,9 @@ export default function AdminItems() {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>New item in {selectedCat}</Text>
+            <Text style={styles.sheetTitle}>
+              {editingItem ? `Edit ${editingItem.name}` : `New item in ${selectedCat}`}
+            </Text>
 
             <Pressable
               testID="admin-pick-image-btn"
@@ -364,7 +402,9 @@ export default function AdminItems() {
               {saving ? (
                 <ActivityIndicator color={colors.onBrandPrimary} />
               ) : (
-                <Text style={styles.saveBtnText}>Add to menu</Text>
+                <Text style={styles.saveBtnText}>
+                  {editingItem ? 'Update item' : 'Add to menu'}
+                </Text>
               )}
             </Pressable>
             <Pressable onPress={() => setFormOpen(false)} style={styles.cancelBtn} disabled={saving}>
@@ -445,6 +485,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   tagText: { fontSize: type.xs, fontWeight: '800', letterSpacing: 0.2 },
+  editBtn: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    backgroundColor: '#E3F2FD',
+  },
   deleteBtn: {
     width: 30,
     height: 30,
