@@ -11,9 +11,11 @@ console.log('[INFO] Dist path:', distPath);
 console.log('[INFO] Dist exists:', fs.existsSync(distPath));
 console.log('[INFO] Index.html exists:', fs.existsSync(indexPath));
 
+// Serve static files
 app.use(express.static(distPath));
 
-app.get('*', (req, res) => {
+// Catch-all route for SPA - use regex instead of wildcard
+app.get(/.*/, (req, res) => {
   console.log('[LOG] Request to:', req.path);
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
