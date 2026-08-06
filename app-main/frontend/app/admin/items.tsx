@@ -129,21 +129,24 @@ export default function AdminItems() {
   };
 
   const remove = (item: MenuItem) => {
-    Alert.alert('Remove item?', `Delete "${item.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.deleteMenuItem(item.id);
-            load();
-          } catch (e: any) {
-            Alert.alert('Delete failed', e?.message);
-          }
-        },
-      },
-    ]);
+    console.log('[DEBUG] Delete button clicked for item:', item.id, item.name);
+    const confirmed = confirm(`Delete "${item.name}"?`);
+    if (confirmed) {
+      handleDelete(item);
+    }
+  };
+
+  const handleDelete = async (item: MenuItem) => {
+    console.log('[DEBUG] Delete confirmed for:', item.id);
+    try {
+      console.log('[DEBUG] Calling deleteMenuItem API...');
+      await api.deleteMenuItem(item.id);
+      console.log('[DEBUG] Delete successful');
+      load();
+    } catch (e: any) {
+      console.error('[DEBUG] Delete error:', e);
+      alert('Delete failed: ' + (e?.message || 'Unknown error'));
+    }
   };
 
   const tagStyle = (t: ItemTag) => ({
