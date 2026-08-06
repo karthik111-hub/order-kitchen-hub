@@ -2,54 +2,34 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# Copy everything
+# Copy package files
+COPY package.json package-lock.json yarn.lock* ./
+
+# Install dependencies (no preinstall hook now)
+RUN npm install --legacy-peer-deps 2>&1
+
+# Copy source code
 COPY . .
 
-# Install dependencies with npm, skip all scripts
-RUN npm install --ignore-scripts --legacy-peer-deps --no-audit --no-fund --prefer-offline 2>&1 || true
+# Build static export
+RUN npx expo export --platform web --clear
 
-# Build the static export directly
-RUN npx --yes expo export --platform web --clear 2>&1 || true
-
-# Runtime - minimal Express server
+# Runtime
 FROM node:24-alpine
 
 WORKDIR /app
 
-# Get dist from builder
+# Copy dist folder from builder
 COPY --from=builder /app/dist ./dist
 
-# Create package.json without preinstall hook
-RUN cat > package.json << 'EOF'
-{
-  "name": "frontend-server",
-  "version": "1.0.0",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2"
-  }
-}
-EOF
-
-# Create simple server
-RUN cat > server.js << 'EOF'
-const express = require('express');
-const path = require('path');
-const app = express();
-app.use(express.static(path.join(__dirname, 'dist')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-const port = process.env.PORT || 8082;
-app.listen(port, '0.0.0.0', () => {
-  console.log('Server running on port ' + port);
-});
-EOF
+# Create minimal package.json for runtime
+RUN echo '{"name":"server","version":"1.0.0","dependencies":{"express":"^4.18.2"}}' > package.json
 
 # Install express
-RUN npm install --production --legacy-peer-deps
+RUN npm install --production
+
+# Create server
+RUN echo 'const express=require("express");const path=require("path");const app=express();const port=process.env.PORT||8082;app.use(express.static(path.join(__dirname,"dist")));app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"dist","index.html")));app.listen(port,"0.0.0.0",()=>console.log("Server on port "+port));' > server.js
 
 EXPOSE 8082
 
