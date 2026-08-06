@@ -2,9 +2,6 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# Install bash
-RUN apk add --no-cache bash
-
 # Copy package files
 COPY package.json package-lock.json yarn.lock* ./
 
