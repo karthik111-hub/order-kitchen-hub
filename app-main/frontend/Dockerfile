@@ -14,6 +14,16 @@ RUN yarn install --ignore-scripts --frozen-lockfile 2>/dev/null || npm ci --igno
 # Copy the rest of the application
 COPY . .
 
+# Copy and make startup script executable
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 EXPOSE 8082
 
-CMD ["yarn", "web"]
+# Set environment variables for non-interactive mode
+ENV EXPO_DEBUG=true
+ENV CI=true
+ENV NODE_ENV=production
+ENV PORT=8082
+
+CMD ["/app/start.sh"]
