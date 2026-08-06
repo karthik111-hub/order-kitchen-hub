@@ -32,7 +32,7 @@ RUN npm init -y && npm install --production express
 COPY --from=builder /app/dist ./dist
 
 # Copy server script
-COPY frontend/server.js ./
+COPY server.js ./
 
 EXPOSE 8082
 
