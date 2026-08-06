@@ -7,6 +7,8 @@ const distPath = path.join(__dirname, 'dist');
 const indexPath = path.join(distPath, 'index.html');
 
 console.log('[INFO] Starting server...');
+console.log('[INFO] NODE_ENV:', process.env.NODE_ENV);
+console.log('[INFO] PORT env:', process.env.PORT);
 console.log('[INFO] Dist path:', distPath);
 console.log('[INFO] Dist exists:', fs.existsSync(distPath));
 
@@ -19,7 +21,7 @@ console.log('[INFO] Index.html exists:', fs.existsSync(indexPath));
 
 // Serve static files with error handling
 app.use(express.static(distPath, {
-  index: false // Don't auto-serve index.html
+  index: false
 }));
 
 // Health check
@@ -45,9 +47,12 @@ app.use((req, res, next) => {
   }
 });
 
+// Use Railway's PORT or default to 8082
 const port = process.env.PORT || 8082;
-app.listen(port, '0.0.0.0', () => {
-  console.log('[SUCCESS] Server running on port ' + port);
+const host = '0.0.0.0';
+
+app.listen(port, host, () => {
+  console.log(`[SUCCESS] Server running on http://${host}:${port}`);
   console.log('[SUCCESS] Ready to accept requests');
 });
 
