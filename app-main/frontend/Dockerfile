@@ -28,7 +28,7 @@ RUN npm init -y && npm install express
 # Copy server script
 COPY server.js ./
 
-EXPOSE 3000
+EXPOSE 8080
 
 ENV NODE_ENV=production
 

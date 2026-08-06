@@ -7,7 +7,7 @@ export NODE_ENV=production
 export EXPO_NO_INTERACTIVE_CLI=true
 export FORCE_COLOR=true
 
-PORT=${PORT:-8082}
+PORT=${PORT:-8080}
 
 echo "[$(date)] Starting Expo web on port $PORT"
 
