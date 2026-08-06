@@ -5,7 +5,7 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json yarn.lock* ./
 
-# Install dependencies (no preinstall hook now)
+# Install dependencies
 RUN npm install --legacy-peer-deps 2>&1
 
 # Copy source code
@@ -22,14 +22,11 @@ WORKDIR /app
 # Copy dist folder from builder
 COPY --from=builder /app/dist ./dist
 
-# Create minimal package.json for runtime
-RUN echo '{"name":"server","version":"1.0.0","dependencies":{"express":"^4.18.2"}}' > package.json
-
 # Install express
-RUN npm install --production
+RUN npm init -y && npm install express
 
-# Create server
-RUN echo 'const express=require("express");const path=require("path");const app=express();const port=process.env.PORT||8082;app.use(express.static(path.join(__dirname,"dist")));app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"dist","index.html")));app.listen(port,"0.0.0.0",()=>console.log("Server on port "+port));' > server.js
+# Copy server script
+COPY server.js ./
 
 EXPOSE 8082
 

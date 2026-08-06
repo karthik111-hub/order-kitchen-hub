@@ -3,34 +3,32 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT || 8082;
-const HOST = '0.0.0.0';
-
-// Serve static exported files
 const distPath = path.join(__dirname, 'dist');
+const indexPath = path.join(distPath, 'index.html');
 
-if (!fs.existsSync(distPath)) {
-  console.error('ERROR: dist folder not found. Make sure to run: yarn web:export');
-  process.exit(1);
-}
+console.log('[INFO] Starting server...');
+console.log('[INFO] Dist path:', distPath);
+console.log('[INFO] Dist exists:', fs.existsSync(distPath));
+console.log('[INFO] Index.html exists:', fs.existsSync(indexPath));
 
 app.use(express.static(distPath));
 
-// Handle React Router - all routes serve index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'), (err) => {
-    if (err) {
-      res.status(404).json({ error: 'Not found' });
-    }
-  });
+  console.log('[LOG] Request to:', req.path);
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('index.html not found');
+  }
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`[${new Date().toISOString()}] Expo web server running on http://${HOST}:${PORT}`);
-  console.log(`[${new Date().toISOString()}] Serving static files from: ${distPath}`);
+const port = process.env.PORT || 8082;
+app.listen(port, '0.0.0.0', () => {
+  console.log('[SUCCESS] Server running on port ' + port);
+  console.log('[SUCCESS] Ready to accept requests');
 });
 
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  console.log('SIGTERM received, shutting down...');
   process.exit(0);
 });
