@@ -2,9 +2,6 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# Install bash
-RUN apk add --no-cache bash
-
 # Copy package files
 COPY package.json package-lock.json yarn.lock* ./
 
@@ -25,14 +22,12 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-# Install bash
-RUN apk add --no-cache bash
-
 # Copy package.json for express dependency
-COPY --from=builder /app/package.json ./
+COPY package.json ./
 
-# Install only express for serving static files
-RUN yarn add express && yarn cache clean
+# Install only production dependencies (express for serving)
+RUN npm install express --production && \
+    npm cache clean --force
 
 # Copy dist folder from builder
 COPY --from=builder /app/dist ./dist
