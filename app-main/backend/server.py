@@ -42,10 +42,19 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+async def get_next_token_number() -> int:
+    counter = await db.order_counters.find_one_and_update(
+        {"_id": "token_number"},
+        {"$inc": {"value": 1}},
+        return_document=True,
+        upsert=True
+    )
+    return counter["value"]
+
+
 def make_order_id() -> str:
-    """Format: YYYYMMDD-HHMMSS-XXXXXXXX (8-char random hex)."""
     now = datetime.now(timezone.utc)
-    return f"{now:%Y%m%d}-{now:%H%M%S}-{uuid.uuid4().hex[:8].upper()}"
+    return f"{now:%d-%m-%Y-%H:%M:%S}-{uuid.uuid4().hex[:8].upper()}"
 
 
 # ---------- Models ----------
@@ -101,6 +110,7 @@ class OrderItem(BaseModel):
 
 class Order(BaseModel):
     id: str = Field(default_factory=make_order_id)
+    token_number: int
     items: List[OrderItem]
     total: float
     status: Literal["pending", "preparing", "completed", "cancelled"] = "pending"
@@ -280,7 +290,9 @@ async def create_order(payload: OrderCreate):
     if not payload.items:
         raise HTTPException(status_code=400, detail="Order must contain at least one item")
     total = sum(i.price * i.quantity for i in payload.items)
+    token_number = await get_next_token_number()
     order = Order(
+        token_number=token_number,
         items=payload.items,
         total=round(total, 2),
         table_number=payload.table_number,
@@ -425,7 +437,9 @@ async def rzp_finalize(intent_id: str, payload: FinalizePayload):
 
     # Create the order marked as paid
     total = sum(i["price"] * i["quantity"] for i in intent["items"])
+    token_number = await get_next_token_number()
     order = Order(
+        token_number=token_number,
         items=[OrderItem(**i) for i in intent["items"]],
         total=round(total, 2),
         table_number=intent.get("table_number"),

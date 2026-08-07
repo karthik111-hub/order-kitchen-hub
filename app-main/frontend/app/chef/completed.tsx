@@ -84,7 +84,7 @@ export default function ChefCompleted() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
+        <View style={styles.flex1}>
           <Text style={styles.title}>Completed Orders</Text>
           <Text style={styles.sub}>{orders.length} orders done</Text>
         </View>
@@ -164,7 +164,7 @@ export default function ChefCompleted() {
                         ]}
                         numberOfLines={1}
                       >
-                        #{shortId(o.id)}
+                        #{o.token_number}
                       </Text>
                       {o.table_number ? (
                         <Text style={styles.headerSubText} numberOfLines={1}>
@@ -229,8 +229,8 @@ export default function ChefCompleted() {
             {orders.map((order) => (
               <View key={order.id} style={styles.orderCard}>
                 <View style={styles.orderHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.orderId}>Order #{shortId(order.id)}</Text>
+                  <View style={styles.flex1}>
+                    <Text style={styles.orderId}>#{order.token_number}</Text>
                     {order.table_number && (
                       <Text style={styles.tableNumber}>Table {order.table_number}</Text>
                     )}
@@ -243,7 +243,7 @@ export default function ChefCompleted() {
                   {order.items.map((item, idx) => (
                     <View key={idx} style={styles.orderItem}>
                       <Text style={styles.itemQty}>{item.quantity}×</Text>
-                      <View style={{ flex: 1 }}>
+                      <View style={styles.flex1}>
                         <Text style={styles.itemName}>{item.name}</Text>
                         <Text style={styles.itemPrice}>₹{item.price.toFixed(2)}</Text>
                       </View>
@@ -474,4 +474,5 @@ const styles = StyleSheet.create({
     fontSize: type.base,
     fontWeight: '700',
   },
+  flex1: { flex: 1 },
 });

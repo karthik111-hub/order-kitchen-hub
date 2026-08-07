@@ -173,7 +173,7 @@ export default function ChefPending() {
                         ]}
                         numberOfLines={1}
                       >
-                        #{shortId(o.id)}
+                        #{o.token_number}
                       </Text>
                       {o.table_number ? (
                         <Text style={styles.headerSubText} numberOfLines={1}>
@@ -238,8 +238,8 @@ export default function ChefPending() {
             {orders.map((order) => (
               <View key={order.id} style={styles.orderCard}>
                 <View style={styles.orderHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.orderId}>Order #{shortId(order.id)}</Text>
+                  <View style={styles.flex1}>
+                    <Text style={styles.orderId}>#{order.token_number}</Text>
                     {order.table_number && (
                       <Text style={styles.tableNumber}>Table {order.table_number}</Text>
                     )}

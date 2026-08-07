@@ -33,6 +33,7 @@ export type PaymentStatus = 'unpaid' | 'paid';
 
 export type Order = {
   id: string;
+  token_number: number;
   items: OrderItem[];
   total: number;
   status: OrderStatus;
