@@ -83,7 +83,7 @@ export default function ChefPreparing() {
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     try {
-      await api.updateOrderStatus(orderId, newStatus);
+      await api.updateStatus(orderId, newStatus as any);
       load();
     } catch (e) {
       console.warn(e);
