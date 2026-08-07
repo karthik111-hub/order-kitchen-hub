@@ -23,14 +23,6 @@ export default function ChefLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => <Ionicons name="grid-outline" size={18} color={color} />,
-          tabBarButtonTestID: 'chef-tab-dashboard',
-        }}
-      />
-      <Tabs.Screen
         name="pending"
         options={{
           title: 'Pending',
