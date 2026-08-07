@@ -59,6 +59,10 @@ class CategoryCreate(BaseModel):
     name: str
 
 
+class CategoryUpdate(BaseModel):
+    name: str
+
+
 ItemTag = Literal["most_selling", "must_buy"]
 
 
@@ -76,6 +80,13 @@ class MenuItemCreate(BaseModel):
     name: str
     price: float
     category: str
+    tag: Optional[ItemTag] = None
+    image_base64: Optional[str] = None
+
+
+class MenuItemUpdate(BaseModel):
+    name: str
+    price: float
     tag: Optional[ItemTag] = None
     image_base64: Optional[str] = None
 
@@ -178,6 +189,23 @@ async def create_category(payload: CategoryCreate):
     return cat
 
 
+@api_router.patch("/categories/{cat_id}", response_model=Category)
+async def update_category(cat_id: str, payload: CategoryUpdate):
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Category name required")
+    
+    result = await db.categories.find_one_and_update(
+        {"id": cat_id},
+        {"$set": {"name": name}},
+        return_document=True,
+        projection={"_id": 0},
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return Category(**result)
+
+
 @api_router.delete("/categories/{cat_id}")
 async def delete_category(cat_id: str):
     print(f"DEBUG: Attempting to delete category {cat_id}", flush=True)
@@ -209,6 +237,24 @@ async def create_menu_item(payload: MenuItemCreate):
     item = MenuItem(**payload.dict())
     await db.menu_items.insert_one(item.dict())
     return item
+
+
+@api_router.patch("/menu/{item_id}", response_model=MenuItem)
+async def update_menu_item(item_id: str, payload: MenuItemUpdate):
+    result = await db.menu_items.find_one_and_update(
+        {"id": item_id},
+        {"$set": {
+            "name": payload.name.strip(),
+            "price": payload.price,
+            "tag": payload.tag,
+            "image_base64": payload.image_base64,
+        }},
+        return_document=True,
+        projection={"_id": 0},
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    return MenuItem(**result)
 
 
 @api_router.delete("/menu/{item_id}")

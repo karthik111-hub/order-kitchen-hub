@@ -76,6 +76,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     }).then(r => handle<Category>(r)),
+  updateCategory: (id: string, name: string) =>
+    fetch(`${API}/categories/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }).then(r => handle<Category>(r)),
   deleteCategory: (id: string) =>
     fetch(`${API}/categories/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
 
@@ -92,6 +98,17 @@ export const api = {
   }) =>
     fetch(`${API}/menu`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(r => handle<MenuItem>(r)),
+  updateMenuItem: (id: string, body: {
+    name: string;
+    price: number;
+    tag?: ItemTag | null;
+    image_base64?: string | null;
+  }) =>
+    fetch(`${API}/menu/${id}`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(r => handle<MenuItem>(r)),
