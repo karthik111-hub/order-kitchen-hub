@@ -97,14 +97,6 @@ export default function ChefCompleted() {
         </Pressable>
       </View>
 
-      <View style={styles.legendRow}>
-        <View style={[styles.legendPill, { backgroundColor: '#E8F5E9' }]}>
-          <View style={[styles.dot, { backgroundColor: colors.success }]} />
-          <Text style={styles.legendText}>Completed</Text>
-        </View>
-        <Text style={styles.grandText}>Total items: {matrix.grandTotal}</Text>
-      </View>
-
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.brand} />
@@ -119,9 +111,8 @@ export default function ChefCompleted() {
         </View>
       ) : (
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator
-          contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 90 }}
+          showsVerticalScrollIndicator
+          contentContainerStyle={{ paddingBottom: 20 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -133,86 +124,148 @@ export default function ChefCompleted() {
             />
           }
         >
-          <View testID="completed-matrix">
-            {/* Header row */}
-            <View style={styles.headerRow}>
-              <View style={[styles.headerCell, { width: ITEM_COL_WIDTH }]}>
-                <Text style={styles.headerCellText}>Item</Text>
+          {/* Board Matrix Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Board Matrix</Text>
+            <View style={styles.legendRow}>
+              <View style={[styles.legendPill, { backgroundColor: '#E8F5E9' }]}>
+                <View style={[styles.dot, { backgroundColor: colors.success }]} />
+                <Text style={styles.legendText}>Completed</Text>
               </View>
-              {matrix.orders.map(o => (
-                <View
-                  key={o.id}
-                  style={[
-                    styles.headerCell,
-                    {
-                      width: ORDER_COL_WIDTH,
-                      backgroundColor: '#E8F5E9',
-                    },
-                  ]}
-                  testID={`completed-col-${o.id}`}
-                >
-                  <Text
-                    style={[
-                      styles.headerCellText,
-                      { color: colors.success },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    #{shortId(o.id)}
-                  </Text>
-                  {o.table_number ? (
-                    <Text style={styles.headerSubText} numberOfLines={1}>
-                      T-{o.table_number}
-                    </Text>
-                  ) : null}
-                </View>
-              ))}
-              <View
-                style={[styles.headerCell, styles.totalCell, { width: TOTAL_COL_WIDTH }]}
-              >
-                <Text style={[styles.headerCellText, { color: colors.onBrandPrimary }]}>
-                  Total
-                </Text>
-              </View>
+              <Text style={styles.grandText}>Total items: {matrix.grandTotal}</Text>
             </View>
-
-            {/* Item rows */}
-            <ScrollView>
-              {matrix.itemNames.map((name, rowIdx) => (
-                <View
-                  key={name}
-                  style={[
-                    styles.row,
-                    { backgroundColor: rowIdx % 2 === 0 ? colors.surfaceSecondary : '#FCFCFB' },
-                  ]}
-                  testID={`completed-row-${name}`}
-                >
-                  <View style={[styles.itemCell, { width: ITEM_COL_WIDTH }]}>
-                    <Text style={styles.itemNameText} numberOfLines={2}>
-                      {name}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator
+              contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}
+            >
+              <View testID="completed-matrix">
+                {/* Header row */}
+                <View style={styles.headerRow}>
+                  <View style={[styles.headerCell, { width: ITEM_COL_WIDTH }]}>
+                    <Text style={styles.headerCellText}>Item</Text>
+                  </View>
+                  {matrix.orders.map(o => (
+                    <View
+                      key={o.id}
+                      style={[
+                        styles.headerCell,
+                        {
+                          width: ORDER_COL_WIDTH,
+                          backgroundColor: '#E8F5E9',
+                        },
+                      ]}
+                      testID={`completed-col-${o.id}`}
+                    >
+                      <Text
+                        style={[
+                          styles.headerCellText,
+                          { color: colors.success },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        #{shortId(o.id)}
+                      </Text>
+                      {o.table_number ? (
+                        <Text style={styles.headerSubText} numberOfLines={1}>
+                          T-{o.table_number}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ))}
+                  <View
+                    style={[styles.headerCell, styles.totalCell, { width: TOTAL_COL_WIDTH }]}
+                  >
+                    <Text style={[styles.headerCellText, { color: colors.onBrandPrimary }]}>
+                      Total
                     </Text>
                   </View>
-                  {matrix.orders.map(o => {
-                    const qty = matrix.cells[name]?.[o.id] || 0;
-                    return (
-                      <View
-                        key={o.id}
-                        style={[styles.qtyCell, { width: ORDER_COL_WIDTH }]}
-                      >
-                        {qty > 0 ? (
-                          <Text style={styles.qtyText}>{qty}</Text>
-                        ) : (
-                          <Text style={styles.dashText}>–</Text>
-                        )}
-                      </View>
-                    );
-                  })}
-                  <View style={[styles.qtyCell, styles.totalCell, { width: TOTAL_COL_WIDTH }]}>
-                    <Text style={styles.totalCellText}>{matrix.totals[name]}</Text>
-                  </View>
                 </View>
-              ))}
+
+                {/* Item rows */}
+                <ScrollView>
+                  {matrix.itemNames.map((name, rowIdx) => (
+                    <View
+                      key={name}
+                      style={[
+                        styles.row,
+                        { backgroundColor: rowIdx % 2 === 0 ? colors.surfaceSecondary : '#FCFCFB' },
+                      ]}
+                      testID={`completed-row-${name}`}
+                    >
+                      <View style={[styles.itemCell, { width: ITEM_COL_WIDTH }]}>
+                        <Text style={styles.itemNameText} numberOfLines={2}>
+                          {name}
+                        </Text>
+                      </View>
+                      {matrix.orders.map(o => {
+                        const qty = matrix.cells[name]?.[o.id] || 0;
+                        return (
+                          <View
+                            key={o.id}
+                            style={[styles.qtyCell, { width: ORDER_COL_WIDTH }]}
+                          >
+                            {qty > 0 ? (
+                              <Text style={styles.qtyText}>{qty}</Text>
+                            ) : (
+                              <Text style={styles.dashText}>–</Text>
+                            )}
+                          </View>
+                        );
+                      })}
+                      <View style={[styles.qtyCell, styles.totalCell, { width: TOTAL_COL_WIDTH }]}>
+                        <Text style={styles.totalCellText}>{matrix.totals[name]}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
             </ScrollView>
+          </View>
+
+          {/* Order List Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Order Details</Text>
+            {orders.map((order) => (
+              <View key={order.id} style={styles.orderCard}>
+                <View style={styles.orderHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.orderId}>Order #{shortId(order.id)}</Text>
+                    {order.table_number && (
+                      <Text style={styles.tableNumber}>Table {order.table_number}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.total}>₹{order.total.toFixed(2)}</Text>
+                </View>
+
+                {/* Order Items */}
+                <View style={styles.itemsList}>
+                  {order.items.map((item, idx) => (
+                    <View key={idx} style={styles.orderItem}>
+                      <Text style={styles.itemQty}>{item.quantity}×</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.itemName}>{item.name}</Text>
+                        <Text style={styles.itemPrice}>₹{item.price.toFixed(2)}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Order Notes */}
+                {order.notes && (
+                  <View style={styles.notesSection}>
+                    <Text style={styles.notesLabel}>Notes:</Text>
+                    <Text style={styles.notesText}>{order.notes}</Text>
+                  </View>
+                )}
+
+                {/* Status Badge */}
+                <View style={styles.statusBadge}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <Text style={styles.statusText}>Order Complete</Text>
+                </View>
+              </View>
+            ))}
           </View>
         </ScrollView>
       )}
@@ -239,13 +292,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  legendRow: {
+
+  section: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: type.lg,
+    fontWeight: '800',
+    color: colors.onSurface,
+    marginBottom: spacing.md,
+  },
+
+  legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    flexWrap: 'wrap',
+    marginBottom: spacing.md,
   },
   legendPill: {
     flexDirection: 'row',
@@ -285,7 +348,7 @@ const styles = StyleSheet.create({
     ...shadow.soft,
   },
   headerCell: {
-    height: ROW_HEIGHT + 8,
+    height: 48,
     paddingHorizontal: spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
@@ -302,7 +365,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.divider,
   },
   itemCell: {
-    height: ROW_HEIGHT,
+    height: 40,
     paddingHorizontal: spacing.sm,
     justifyContent: 'center',
     borderRightWidth: 1,
@@ -310,7 +373,7 @@ const styles = StyleSheet.create({
   },
   itemNameText: { fontSize: type.sm, fontWeight: '700', color: colors.onSurface },
   qtyCell: {
-    height: ROW_HEIGHT,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRightWidth: 1,
@@ -322,4 +385,93 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
   },
   totalCellText: { color: colors.onBrandPrimary, fontSize: type.lg, fontWeight: '800' },
+
+  // Order Card Styles
+  orderCard: {
+    backgroundColor: '#E8F5E9',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success,
+    ...shadow.soft,
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  orderId: {
+    fontSize: type.base,
+    fontWeight: '800',
+    color: colors.onSurface,
+  },
+  tableNumber: {
+    fontSize: type.sm,
+    color: colors.muted,
+    marginTop: 2,
+  },
+  total: {
+    fontSize: type.lg,
+    fontWeight: '800',
+    color: colors.success,
+  },
+  itemsList: {
+    marginBottom: spacing.md,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  itemQty: {
+    fontSize: type.base,
+    fontWeight: '800',
+    color: colors.success,
+    marginRight: spacing.sm,
+    width: 30,
+  },
+  itemName: {
+    fontSize: type.base,
+    fontWeight: '600',
+    color: colors.onSurface,
+  },
+  itemPrice: {
+    fontSize: type.sm,
+    color: colors.muted,
+    marginTop: 2,
+  },
+  notesSection: {
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  notesLabel: {
+    fontSize: type.sm,
+    fontWeight: '700',
+    color: colors.muted,
+  },
+  notesText: {
+    fontSize: type.sm,
+    color: colors.onSurface,
+    marginTop: 4,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    gap: spacing.sm,
+  },
+  statusText: {
+    color: colors.success,
+    fontSize: type.base,
+    fontWeight: '700',
+  },
 });
