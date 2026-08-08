@@ -35,6 +35,15 @@ ROLE_PASSWORDS = {
 RAZORPAY_SETTINGS_ID = "razorpay"
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 api_router = APIRouter(prefix="/api")
 
 
@@ -677,15 +686,6 @@ async def daily_report(date_str: Optional[str] = Query(None, alias="date")):
 
 
 app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
 
 logging.basicConfig(
     level=logging.INFO,
