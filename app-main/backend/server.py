@@ -287,11 +287,16 @@ async def delete_menu_item(item_id: str):
 # Orders
 @api_router.get("/orders", response_model=List[Order])
 async def list_orders(status: Optional[str] = None):
-    query = {}
-    if status:
-        query["status"] = status
-    orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
-    return [Order(**o) for o in orders]
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
+        logger.info(f"Found {len(orders)} orders with status filter: {status}")
+        return [Order(**o) for o in orders]
+    except Exception as e:
+        logger.error(f"Error listing orders: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error listing orders: {str(e)}")  
 
 
 @api_router.post("/orders", response_model=Order)
