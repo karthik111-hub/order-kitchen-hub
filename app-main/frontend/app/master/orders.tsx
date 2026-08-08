@@ -79,7 +79,7 @@ export default function OrdersScreen() {
   const cancelOrder = async (o: Order) => {
     const ok = await confirm(
       'Cancel order?',
-      `Cancel order #${o.id.split('-').pop()}?`,
+      `Cancel order #${o.token_number || o.id.split('-').pop()}?`,
       { confirmLabel: 'Cancel Order', cancelLabel: 'Keep', destructive: true },
     );
     if (!ok) return;
@@ -91,6 +91,23 @@ export default function OrdersScreen() {
       load();
     } catch (e: any) {
       Alert.alert('Failed to cancel', e?.message ?? 'Try again');
+      load();
+    }
+  };
+
+  const deleteOrder = async (o: Order) => {
+    const ok = await confirm(
+      'Delete order?',
+      `Permanently delete order #${o.token_number || o.id.split('-').pop()}?`,
+      { confirmLabel: 'Delete', cancelLabel: 'Cancel', destructive: true },
+    );
+    if (!ok) return;
+    setOrders(prev => prev.filter(x => x.id !== o.id));
+    try {
+      await api.deleteOrder(o.id);
+      load();
+    } catch (e: any) {
+      Alert.alert('Failed to delete', e?.message ?? 'Try again');
       load();
     }
   };
@@ -155,19 +172,29 @@ export default function OrdersScreen() {
               <View style={styles.card} testID={`order-card-${item.id}`}>
                 <View style={styles.rowBetween}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.orderId}>#{item.id.split('-').pop() || item.id.slice(0, 8)}</Text>
+                    <Text style={styles.orderId}>#{item.token_number || item.id.split('-').pop() || item.id.slice(0, 8)}</Text>
                     <Text style={styles.orderTime}>{timeAgo(item.created_at)}</Text>
                   </View>
-                  {item.status !== 'completed' && item.status !== 'cancelled' && (
+                  <View style={styles.actions}>
+                    {item.status !== 'completed' && item.status !== 'cancelled' && (
+                      <Pressable
+                        testID={`cancel-order-link-${item.id}`}
+                        onPress={() => cancelOrder(item)}
+                        hitSlop={8}
+                        style={styles.actionLink}
+                      >
+                        <Text style={styles.actionLinkText}>Cancel</Text>
+                      </Pressable>
+                    )}
                     <Pressable
-                      testID={`cancel-order-link-${item.id}`}
-                      onPress={() => cancelOrder(item)}
+                      testID={`delete-order-link-${item.id}`}
+                      onPress={() => deleteOrder(item)}
                       hitSlop={8}
-                      style={styles.cancelLink}
+                      style={styles.actionLink}
                     >
-                      <Text style={styles.cancelLinkText}>Cancel</Text>
+                      <Ionicons name="trash-outline" size={16} color={colors.error} />
                     </Pressable>
-                  )}
+                  </View>
                 </View>
                 <View style={styles.pillsRow}>
                     <View
@@ -285,11 +312,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     flexWrap: 'wrap',
   },
-  cancelLink: {
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionLink: {
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
   },
-  cancelLinkText: {
+  actionLinkText: {
     color: colors.error,
     fontSize: type.sm,
     fontWeight: '700',

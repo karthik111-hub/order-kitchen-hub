@@ -136,8 +136,9 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     }).then(r => handle<Order>(r)),
+  deleteOrder: (id: string) =>
+    fetch(`${API}/orders/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
 
-  // Razorpay
   rzpStatus: () =>
     fetch(`${API}/razorpay/settings/status`).then(r =>
       handle<{ configured: boolean; key_id_masked: string | null }>(r),

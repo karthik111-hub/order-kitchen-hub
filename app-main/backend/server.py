@@ -335,12 +335,17 @@ async def update_order_status(order_id: str, payload: OrderStatusUpdate):
     return Order(**result)
 
 
-@api_router.get("/orders/{order_id}", response_model=Order)
-async def get_order(order_id: str):
-    o = await db.orders.find_one({"id": order_id}, {"_id": 0})
-    if not o:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return Order(**o)
+@api_router.delete("/orders/{order_id}")
+async def delete_order(order_id: str):
+    try:
+        result = await db.orders.delete_one({"id": order_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        logger.info(f"Order {order_id} deleted")
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"Error deleting order: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error deleting order: {str(e)}")
 
 
 # Razorpay settings
