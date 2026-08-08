@@ -70,7 +70,7 @@ export default function ChefPreparing() {
   useFocusEffect(
     useCallback(() => {
       load();
-      const id = setInterval(load, 4000);
+        const id = setInterval(load, 1500);
       return () => clearInterval(id);
     }, [load]),
   );
