@@ -119,7 +119,7 @@ class OrderItem(BaseModel):
 
 class Order(BaseModel):
     id: str = Field(default_factory=make_order_id)
-    token_number: int
+    token_number: int = 0
     items: List[OrderItem]
     total: float
     status: Literal["pending", "preparing", "completed", "cancelled"] = "pending"
