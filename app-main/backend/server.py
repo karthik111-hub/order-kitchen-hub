@@ -287,20 +287,24 @@ async def list_orders(status: Optional[str] = None):
 
 @api_router.post("/orders", response_model=Order)
 async def create_order(payload: OrderCreate):
-    if not payload.items:
-        raise HTTPException(status_code=400, detail="Order must contain at least one item")
-    total = sum(i.price * i.quantity for i in payload.items)
-    token_number = await get_next_token_number()
-    order = Order(
-        token_number=token_number,
-        items=payload.items,
-        total=round(total, 2),
-        table_number=payload.table_number,
-        notes=payload.notes,
-        payment_status="unpaid",
-    )
-    await db.orders.insert_one(order.dict())
-    return order
+    try:
+        if not payload.items:
+            raise HTTPException(status_code=400, detail="Order must contain at least one item")
+        total = sum(i.price * i.quantity for i in payload.items)
+        token_number = await get_next_token_number()
+        order = Order(
+            token_number=token_number,
+            items=payload.items,
+            total=round(total, 2),
+            table_number=payload.table_number,
+            notes=payload.notes,
+            payment_status="unpaid",
+        )
+        await db.orders.insert_one(order.dict())
+        return order
+    except Exception as e:
+        logger.error(f"Error creating order: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
 
 
 @api_router.patch("/orders/{order_id}/status", response_model=Order)
@@ -680,6 +684,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 logging.basicConfig(
