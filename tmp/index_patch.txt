@@ -1,0 +1,66 @@
+INSTRUCTIONS FOR UPDATING app-main/frontend/app/master/index.tsx
+
+STEP 1: Add this state declaration after line 48 (const [placing, setPlacing] = useState(false);):
+
+  const [savingDraft, setSavingDraft] = useState(false);
+
+STEP 2: Add this function after the payAndPlace function (around line 180):
+
+  const saveDraft = async () => {
+    if (lines.length === 0) return;
+    try {
+      setSavingDraft(true);
+      await api.saveDraft({
+        items: lines,
+        table_number: tableNumber || undefined,
+        notes: notes || undefined,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      cartStore.clear();
+      setTableNumber('');
+      setNotes('');
+      setCartOpen(false);
+      Alert.alert('Success', 'Order saved as draft');
+    } catch (e: any) {
+      Alert.alert('Failed to save draft', e?.message ?? 'Try again');
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+STEP 3: Add this button in the modal, after the payHint text (around line 560):
+
+            <Pressable
+              testID="save-draft-btn"
+              onPress={saveDraft}
+              disabled={savingDraft || placing || paying}
+              style={[
+                styles.draftBtn,
+                (savingDraft || placing || paying) && { opacity: 0.55 },
+              ]}
+            >
+              {savingDraft ? (
+                <ActivityIndicator color={colors.muted} />
+              ) : (
+                <>
+                  <Ionicons name="document-text-outline" size={14} color={colors.muted} />
+                  <Text style={styles.draftBtnText}>Save as Draft</Text>
+                </>
+              )}
+            </Pressable>
+
+STEP 4: Add these styles at the very end of the styles object (before the final });):
+
+  draftBtn: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1.5,
+    borderColor: colors.muted,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+  },
+  draftBtnText: { color: colors.muted, fontWeight: '700', fontSize: type.base },
