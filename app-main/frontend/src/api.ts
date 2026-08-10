@@ -139,6 +139,18 @@ export const api = {
   deleteOrder: (id: string) =>
     fetch(`${API}/orders/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
 
+  saveDraft: (body: { items: OrderItem[]; table_number?: string; notes?: string }) =>
+    fetch(`${API}/drafts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(r => handle<Order>(r)),
+  listDrafts: () => fetch(`${API}/drafts`).then(r => handle<Order[]>(r)),
+  sendDraft: (id: string) =>
+    fetch(`${API}/drafts/${id}/send`, { method: 'POST' }).then(r => handle<{ ok: boolean; order_id: string }>(r)),
+  deleteDraft: (id: string) =>
+    fetch(`${API}/drafts/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
+
   rzpStatus: () =>
     fetch(`${API}/razorpay/settings/status`).then(r =>
       handle<{ configured: boolean; key_id_masked: string | null }>(r),

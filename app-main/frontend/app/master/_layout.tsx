@@ -38,6 +38,14 @@ export default function MasterLayout() {
           tabBarButtonTestID: 'master-tab-orders',
         }}
       />
+      <Tabs.Screen
+        name="drafts"
+        options={{
+          title: 'Drafts',
+          tabBarIcon: ({ color }) => <Ionicons name="document-outline" size={18} color={color} />,
+          tabBarButtonTestID: 'master-tab-drafts',
+        }}
+      />
     </Tabs>
   );
 }
