@@ -453,22 +453,6 @@ export default function AdminItems() {
               </Pressable>
             </View>
 
-            <View style={styles.availabilityRow}>
-              <View>
-                <Text style={styles.tagLabel}>Visibility</Text>
-                <Text style={styles.availabilityDesc}>
-                  {isAvailable ? 'Visible to Master' : 'Hidden from Menu'}
-                </Text>
-              </View>
-              <Pressable
-                testID={`admin-toggle-availability-${editingItem?.id}`}
-                onPress={() => setIsAvailable(!isAvailable)}
-                style={[styles.toggle, isAvailable && styles.toggleOn]}
-              >
-                <View style={[styles.toggleThumb, isAvailable && styles.toggleThumbOn]} />
-              </Pressable>
-            </View>
-
             <Pressable
               testID="admin-save-item-btn"
               onPress={save}
