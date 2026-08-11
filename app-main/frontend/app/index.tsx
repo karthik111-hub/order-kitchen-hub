@@ -98,7 +98,7 @@ export default function RoleSelect() {
       <View style={styles.header}>
         <View style={styles.brandBadge}>
           <Ionicons name="restaurant" size={12} color={colors.brand} />
-          <Text style={styles.brandBadgeText}>ServeSync</Text>
+          <Text style={styles.brandBadgeText}>Nanu marchipoyava mama...</Text>
         </View>
         <Text style={styles.title}>Who's on duty?</Text>
         <Text style={styles.subtitle}>Pick your role to jump straight into the flow.</Text>
