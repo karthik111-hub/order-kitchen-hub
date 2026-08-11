@@ -677,6 +677,41 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   tagChipText: { fontSize: type.sm, fontWeight: '800' },
+  availabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surfaceTertiary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
+  },
+  availabilityDesc: {
+    marginTop: 2,
+    fontSize: type.sm,
+    color: colors.muted,
+  },
+  toggle: {
+    width: 50,
+    height: 28,
+    borderRadius: radius.pill,
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleOn: {
+    backgroundColor: colors.brand,
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.pill,
+    backgroundColor: colors.onSurface,
+  },
+  toggleThumbOn: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.onBrandPrimary,
+  },
   saveBtn: {
     backgroundColor: colors.brand,
     paddingVertical: spacing.md,
