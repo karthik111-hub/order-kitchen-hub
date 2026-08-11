@@ -45,7 +45,7 @@ export default function AdminItems() {
 
   const load = useCallback(async () => {
     try {
-      const [c, i] = await Promise.all([api.listCategories(), api.listMenu()]);
+      const [c, i] = await Promise.all([api.listCategories(), api.listMenu(undefined, true)]);
       setCats(c);
       setItems(i);
       if (!selectedCat && c.length > 0) setSelectedCat(c[0].name);
@@ -293,6 +293,12 @@ export default function AdminItems() {
                           </Text>
                         </View>
                       ) : null}
+                      {!item.is_available && (
+                        <View style={styles.hiddenBadge}>
+                          <Ionicons name="eye-off" size={7} color={colors.error} />
+                          <Text style={styles.hiddenBadgeText}>Hidden</Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
                   </View>
@@ -555,6 +561,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   tagText: { fontSize: type.xs, fontWeight: '800', letterSpacing: 0.2 },
+  hiddenBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.error + '22',
+  },
+  hiddenBadgeText: {
+    fontSize: type.xs,
+    fontWeight: '800',
+    color: colors.error,
+  },
   editBtn: {
     width: 30,
     height: 30,

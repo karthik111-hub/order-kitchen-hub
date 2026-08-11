@@ -244,12 +244,12 @@ async def delete_category(cat_id: str):
 
 # Menu
 @api_router.get("/menu", response_model=List[MenuItem])
-async def list_menu(category: Optional[str] = None, show_all: bool = False):
+async def list_menu(category: Optional[str] = None, admin: bool = False):
     query = {}
     if category:
         query["category"] = category
-    # Only filter by is_available unless show_all is True (for admin editing)
-    if not show_all:
+    # Only filter by is_available if admin=False (for master/normal users)
+    if not admin:
         query["is_available"] = True
     items = await db.menu_items.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return [MenuItem(**it) for it in items]

@@ -87,8 +87,11 @@ export const api = {
   deleteCategory: (id: string) =>
     fetch(`${API}/categories/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
 
-  listMenu: (category?: string) => {
-    const q = category ? `?category=${encodeURIComponent(category)}` : '';
+  listMenu: (category?: string, admin?: boolean) => {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (admin) params.append('admin', 'true');
+    const q = params.toString() ? `?${params.toString()}` : '';
     return fetch(`${API}/menu${q}`).then(r => handle<MenuItem[]>(r));
   },
   createMenuItem: (body: {
