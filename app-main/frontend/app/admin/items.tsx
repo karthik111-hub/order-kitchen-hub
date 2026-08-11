@@ -182,6 +182,24 @@ export default function AdminItems() {
     }
   };
 
+  const toggleAvailability = async (item: MenuItem) => {
+    try {
+      console.log('[DEBUG] Toggling availability for item:', item.id);
+      await api.updateMenuItem(item.id, {
+        name: item.name,
+        price: item.price,
+        tag: item.tag,
+        image_base64: item.image_base64,
+        is_available: !item.is_available,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      load();
+    } catch (e: any) {
+      console.error('[DEBUG] Toggle error:', e);
+      Alert.alert('Failed to toggle', e?.message ?? 'Try again');
+    }
+  };
+
   const tagStyle = (t: ItemTag) => ({
     color: t === 'must_buy' ? colors.mustBuy : colors.mostSelling,
     label: t === 'must_buy' ? 'MUST BUY' : 'MOST SELLING',
@@ -275,17 +293,24 @@ export default function AdminItems() {
                           </Text>
                         </View>
                       ) : null}
-                      {!item.is_available && (
-                        <View style={styles.unavailableBadge}>
-                          <Ionicons name="eye-off" size={7} color={colors.error} />
-                          <Text style={{ color: colors.error, fontSize: type.xs, fontWeight: '800' }}>
-                            Hidden
-                          </Text>
-                        </View>
-                      )}
                     </View>
                     <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
                   </View>
+                  <Pressable
+                    testID={`admin-item-toggle-${item.id}`}
+                    onPress={() => toggleAvailability(item)}
+                    style={[
+                      styles.toggleBtn,
+                      { backgroundColor: item.is_available ? colors.brand : colors.error },
+                    ]}
+                    hitSlop={8}
+                  >
+                    <Ionicons
+                      name={item.is_available ? 'eye-outline' : 'eye-off-outline'}
+                      size={14}
+                      color={colors.onBrandPrimary}
+                    />
+                  </Pressable>
                   <Pressable
                     testID={`admin-item-edit-${item.id}`}
                     onPress={() => openEditForm(item)}
@@ -422,6 +447,22 @@ export default function AdminItems() {
               </Pressable>
             </View>
 
+            <View style={styles.availabilityRow}>
+              <View>
+                <Text style={styles.tagLabel}>Visibility</Text>
+                <Text style={styles.availabilityDesc}>
+                  {isAvailable ? 'Visible to Master' : 'Hidden from Menu'}
+                </Text>
+              </View>
+              <Pressable
+                testID={`admin-toggle-availability-${editingItem?.id}`}
+                onPress={() => setIsAvailable(!isAvailable)}
+                style={[styles.toggle, isAvailable && styles.toggleOn]}
+              >
+                <View style={[styles.toggleThumb, isAvailable && styles.toggleThumbOn]} />
+              </Pressable>
+            </View>
+
             <Pressable
               testID="admin-save-item-btn"
               onPress={save}
@@ -514,15 +555,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   tagText: { fontSize: type.xs, fontWeight: '800', letterSpacing: 0.2 },
-  unavailableBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-    backgroundColor: colors.error + '18',
-  },
   editBtn: {
     width: 30,
     height: 30,
@@ -530,6 +562,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.pill,
     backgroundColor: '#E3F2FD',
+  },
+  toggleBtn: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
   },
   deleteBtn: {
     width: 30,
@@ -618,41 +657,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   tagChipText: { fontSize: type.sm, fontWeight: '800' },
-  availabilityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surfaceTertiary,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    marginBottom: spacing.md,
-  },
-  availabilityDesc: {
-    marginTop: 2,
-    fontSize: type.sm,
-    color: colors.muted,
-  },
-  toggle: {
-    width: 50,
-    height: 28,
-    borderRadius: radius.pill,
-    backgroundColor: colors.border,
-    justifyContent: 'center',
-    padding: 2,
-  },
-  toggleOn: {
-    backgroundColor: colors.brand,
-  },
-  toggleThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.pill,
-    backgroundColor: colors.onSurface,
-  },
-  toggleThumbOn: {
-    alignSelf: 'flex-end',
-    backgroundColor: colors.onBrandPrimary,
-  },
   saveBtn: {
     backgroundColor: colors.brand,
     paddingVertical: spacing.md,
