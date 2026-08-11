@@ -619,89 +619,112 @@ async def rzp_checkout_page(intent_id: str):
 
 # Daily xlsx report
 @api_router.get("/reports/daily.xlsx")
-async def daily_report(date_str: Optional[str] = Query(None, alias="date")):
-    if date_str:
-        try:
-            target_date = date.fromisoformat(date_str)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
-    else:
-        target_date = datetime.now(timezone.utc).date()
+async def daily_report(
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to")
+):
+    try:
+        if from_date:
+            try:
+                start_date = date.fromisoformat(from_date)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="from must be YYYY-MM-DD")
+        else:
+            start_date = datetime.now(timezone.utc).date()
+        
+        if to_date:
+            try:
+                end_date = date.fromisoformat(to_date)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="to must be YYYY-MM-DD")
+        else:
+            end_date = start_date
+        
+        # If end_date is before start_date, swap them
+        if end_date < start_date:
+            start_date, end_date = end_date, start_date
+        
+        start = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        end = datetime.combine(end_date + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
 
-    start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-    end = start + timedelta(days=1)
+        orders = await db.orders.find(
+            {"created_at": {"$gte": start.isoformat(), "$lt": end.isoformat()}},
+            {"_id": 0},
+        ).sort("created_at", 1).to_list(5000)
 
-    orders = await db.orders.find(
-        {"created_at": {"$gte": start.isoformat(), "$lt": end.isoformat()}},
-        {"_id": 0},
-    ).sort("created_at", 1).to_list(5000)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Orders"
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Orders"
+        headers = [
+            "Token #", "Order ID", "Time (UTC)", "Table", "Items", "Item Count",
+            "Total (₹)", "Payment Status", "Order Status", "Payment ID", "Notes",
+        ]
+        ws.append(headers)
 
-    headers = [
-        "Order ID", "Time (UTC)", "Table", "Items", "Item Count",
-        "Total (₹)", "Payment Status", "Order Status", "Payment ID", "Notes",
-    ]
-    ws.append(headers)
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill("solid", fgColor="E07A5F")
+        for col_idx, _ in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="left", vertical="center")
 
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill("solid", fgColor="E07A5F")
-    for col_idx, _ in enumerate(headers, start=1):
-        cell = ws.cell(row=1, column=col_idx)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="left", vertical="center")
+        total_revenue_paid = 0.0
+        total_revenue_all = 0.0
 
-    total_revenue_paid = 0.0
-    total_revenue_all = 0.0
+        for o in orders:
+            items_summary = ", ".join(
+                f"{i['quantity']}× {i['name']}" for i in o.get("items", [])
+            )
+            item_count = sum(i.get("quantity", 0) for i in o.get("items", []))
+            pay_id = (o.get("payment") or {}).get("razorpay_payment_id", "")
+            ws.append([
+                o.get("token_number", ""),
+                o.get("id", ""),
+                o.get("created_at", ""),
+                o.get("table_number", "") or "",
+                items_summary,
+                item_count,
+                float(o.get("total", 0)),
+                o.get("payment_status", "unpaid"),
+                o.get("status", "pending"),
+                pay_id,
+                o.get("notes", "") or "",
+            ])
+            total_revenue_all += float(o.get("total", 0))
+            if o.get("payment_status") == "paid":
+                total_revenue_paid += float(o.get("total", 0))
 
-    for o in orders:
-        items_summary = ", ".join(
-            f"{i['quantity']}× {i['name']}" for i in o.get("items", [])
+        # Summary section
+        ws.append([])
+        date_range = f"{start_date.isoformat()} to {end_date.isoformat()}" if from_date or to_date else start_date.isoformat()
+        ws.append(["Summary", date_range])
+        ws.append(["Total orders", len(orders)])
+        ws.append(["Total revenue (₹)", round(total_revenue_all, 2)])
+        ws.append(["Paid revenue (₹)", round(total_revenue_paid, 2)])
+        ws.append(["Unpaid revenue (₹)", round(total_revenue_all - total_revenue_paid, 2)])
+
+        # Column widths
+        widths = [10, 30, 26, 8, 60, 12, 12, 16, 14, 26, 30]
+        for i, w in enumerate(widths, start=1):
+            ws.column_dimensions[chr(64 + i)].width = w
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        filename = f"servesync-report-{start_date.isoformat()}-to-{end_date.isoformat()}.xlsx"
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
-        item_count = sum(i.get("quantity", 0) for i in o.get("items", []))
-        pay_id = (o.get("payment") or {}).get("razorpay_payment_id", "")
-        ws.append([
-            o.get("id", ""),
-            o.get("created_at", ""),
-            o.get("table_number", "") or "",
-            items_summary,
-            item_count,
-            float(o.get("total", 0)),
-            o.get("payment_status", "unpaid"),
-            o.get("status", "pending"),
-            pay_id,
-            o.get("notes", "") or "",
-        ])
-        total_revenue_all += float(o.get("total", 0))
-        if o.get("payment_status") == "paid":
-            total_revenue_paid += float(o.get("total", 0))
-
-    # Summary section
-    ws.append([])
-    ws.append(["Summary", target_date.isoformat()])
-    ws.append(["Total orders", len(orders)])
-    ws.append(["Total revenue (₹)", round(total_revenue_all, 2)])
-    ws.append(["Paid revenue (₹)", round(total_revenue_paid, 2)])
-    ws.append(["Unpaid revenue (₹)", round(total_revenue_all - total_revenue_paid, 2)])
-
-    # Column widths
-    widths = [30, 26, 8, 60, 12, 12, 16, 14, 26, 30]
-    for i, w in enumerate(widths, start=1):
-        ws.column_dimensions[chr(64 + i)].width = w
-
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-
-    filename = f"servesync-report-{target_date.isoformat()}.xlsx"
-    return StreamingResponse(
-        buf,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating report: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}") 
 
 # Draft Orders
 @api_router.post("/drafts", response_model=Order)

@@ -189,8 +189,11 @@ export const api = {
       }>(r),
     ),
 
-  dailyReportUrl: (dateISO?: string) => {
-    const q = dateISO ? `?date=${dateISO}` : '';
+  dailyReportUrl: (fromDate?: string, toDate?: string) => {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from', fromDate);
+    if (toDate) params.append('to', toDate);
+    const q = params.toString() ? `?${params.toString()}` : '';
     return `${API}/reports/daily.xlsx${q}`;
   },
 };

@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,9 @@ import * as Haptics from 'expo-haptics';
 import { api } from '@/src/api';
 import { colors, radius, spacing, type, shadow } from '@/src/theme';
 
+const formatDate = (d: Date) => d.toISOString().split('T')[0];
+const todayDate = formatDate(new Date());
+
 export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
@@ -26,6 +30,9 @@ export default function AdminSettings() {
   const [keyId, setKeyId] = useState('');
   const [keySecret, setKeySecret] = useState('');
   const [saving, setSaving] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [fromDate, setFromDate] = useState(todayDate);
+  const [toDate, setToDate] = useState(todayDate);
 
   const load = useCallback(async () => {
     try {
@@ -210,21 +217,78 @@ export default function AdminSettings() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Daily report</Text>
-                <Text style={styles.cardSub}>Export today's orders as an Excel file</Text>
+                <Text style={styles.cardSub}>Export orders as an Excel file</Text>
               </View>
             </View>
             <Pressable
               testID="download-report-btn"
-              onPress={() => Linking.openURL(api.dailyReportUrl())}
+              onPress={() => setReportModalOpen(true)}
               style={styles.saveBtn}
             >
               <Ionicons name="cloud-download-outline" size={14} color={colors.onBrandPrimary} />
-              <Text style={styles.saveBtnText}>Download today's report (.xlsx)</Text>
+              <Text style={styles.saveBtnText}>Download report (.xlsx)</Text>
             </Pressable>
             <Text style={styles.helperText}>
-              A dated report link is also available on the Orders tab.
+              Select date range to download orders report
             </Text>
           </View>
+
+          <Modal
+            visible={reportModalOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setReportModalOpen(false)}
+          >
+            <Pressable
+              style={styles.backdrop}
+              onPress={() => setReportModalOpen(false)}
+            />
+            <View style={styles.reportModal}>
+              <Text style={styles.reportTitle}>Select Date Range</Text>
+              <View style={styles.dateInputGroup}>
+                <View style={styles.dateField}>
+                  <Text style={styles.dateLabel}>From Date</Text>
+                  <TextInput
+                    testID="report-from-date-input"
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.muted}
+                    value={fromDate}
+                    onChangeText={setFromDate}
+                    style={styles.dateInput}
+                  />
+                </View>
+                <View style={styles.dateField}>
+                  <Text style={styles.dateLabel}>To Date</Text>
+                  <TextInput
+                    testID="report-to-date-input"
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.muted}
+                    value={toDate}
+                    onChangeText={setToDate}
+                    style={styles.dateInput}
+                  />
+                </View>
+              </View>
+              <Pressable
+                testID="download-range-report-btn"
+                onPress={() => {
+                  Linking.openURL(api.dailyReportUrl(fromDate, toDate));
+                  setReportModalOpen(false);
+                }}
+                style={styles.downloadBtn}
+              >
+                <Ionicons name="cloud-download-outline" size={14} color={colors.onBrandPrimary} />
+                <Text style={styles.downloadBtnText}>Download Report</Text>
+              </Pressable>
+              <Pressable
+                testID="cancel-report-btn"
+                onPress={() => setReportModalOpen(false)}
+                style={styles.cancelBtn}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </Modal>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -316,4 +380,72 @@ const styles = StyleSheet.create({
   },
   linkText: { color: colors.brand, fontWeight: '600', fontSize: type.sm },
   helperText: { color: colors.muted, fontSize: type.sm, marginTop: 4, textAlign: 'center' },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reportModal: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  reportTitle: {
+    fontSize: type.lg,
+    fontWeight: '800',
+    color: colors.onSurface,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  dateInputGroup: {
+    width: '100%',
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    ...shadow.soft,
+  },
+  dateField: {
+    gap: spacing.xs,
+  },
+  dateLabel: {
+    fontSize: type.sm,
+    color: colors.onSurfaceTertiary,
+    fontWeight: '700',
+  },
+  dateInput: {
+    backgroundColor: colors.surfaceTertiary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    color: colors.onSurface,
+    fontSize: type.base,
+  },
+  downloadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.brand,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+    marginBottom: spacing.sm,
+    width: '100%',
+  },
+  downloadBtnText: {
+    color: colors.onBrandPrimary,
+    fontWeight: '800',
+    fontSize: type.base,
+  },
+  cancelBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  cancelBtnText: {
+    color: colors.muted,
+    fontWeight: '700',
+    fontSize: type.base,
+  },
 });
