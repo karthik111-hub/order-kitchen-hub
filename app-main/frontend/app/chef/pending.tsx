@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,13 @@ import {
   ActivityIndicator,
   Pressable,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { api, Order } from '@/src/api';
 import { colors, radius, spacing, type, shadow } from '@/src/theme';
 
@@ -52,13 +55,61 @@ export default function ChefPending() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const prevOrderCountRef = useRef<number>(0);
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  const playNotificationSound = async () => {
+    try {
+      if (soundRef.current) {
+        await soundRef.current.stopAsync();
+        await soundRef.current.unloadAsync();
+      }
+      soundRef.current = new Audio.Sound();
+      // Using expo's built-in notification sound or a fallback beep
+      await soundRef.current.loadAsync({
+        uri: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+      });
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+      });
+      await soundRef.current.playAsync();
+    } catch (e) {
+      console.warn('Error playing notification sound:', e);
+    }
+  };
+
+  const showNewOrderNotification = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await playNotificationSound();
+    Alert.alert(
+      '🔔 New Order Received!',
+      'A new order has arrived. Check the pending orders.',
+      [
+        {
+          text: 'OK',
+          onPress: () => {},
+          style: 'default',
+        },
+      ],
+      { cancelable: true },
+    );
+  };
 
   const load = useCallback(async () => {
     try {
       const data = await api.listOrders('pending');
-      setOrders(data.sort((a, b) => 
+      const sortedData = data.sort((a, b) => 
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      ));
+      );
+      
+      // Check if this is not the first load and there are new orders
+      if (prevOrderCountRef.current > 0 && sortedData.length > prevOrderCountRef.current) {
+        await showNewOrderNotification();
+      }
+      
+      prevOrderCountRef.current = sortedData.length;
+      setOrders(sortedData);
     } catch (e) {
       console.warn(e);
     } finally {
@@ -77,6 +128,9 @@ export default function ChefPending() {
 
   useEffect(() => {
     load();
+    return () => {
+      soundRef.current?.unloadAsync();
+    };
   }, [load]);
 
   const matrix = useMemo(() => buildMatrix(orders), [orders]);
@@ -429,6 +483,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.warning,
   },
+  flex1: { flex: 1 },
   itemsList: {
     marginBottom: spacing.md,
   },
