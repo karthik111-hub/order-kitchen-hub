@@ -40,6 +40,7 @@ export default function AdminItems() {
   const [price, setPrice] = useState('');
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [tag, setTag] = useState<ItemTag | null>(null);
+  const [isAvailable, setIsAvailable] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -76,6 +77,7 @@ export default function AdminItems() {
     setPrice('');
     setImageBase64(null);
     setTag(null);
+    setIsAvailable(true);
     setFormOpen(true);
   };
 
@@ -86,6 +88,7 @@ export default function AdminItems() {
     setPrice(item.price.toString());
     setImageBase64(item.image_base64 || null);
     setTag(item.tag || null);
+    setIsAvailable(item.is_available);
     setFormOpen(true);
   };
 
@@ -131,6 +134,7 @@ export default function AdminItems() {
           price: priceNum,
           tag,
           image_base64: imageBase64,
+          is_available: isAvailable,
         });
         console.log('[DEBUG] Item updated successfully');
       } else {
@@ -141,6 +145,7 @@ export default function AdminItems() {
           category: selectedCat,
           tag,
           image_base64: imageBase64,
+          is_available: isAvailable,
         });
         console.log('[DEBUG] Item created successfully');
       }
@@ -270,6 +275,14 @@ export default function AdminItems() {
                           </Text>
                         </View>
                       ) : null}
+                      {!item.is_available && (
+                        <View style={styles.unavailableBadge}>
+                          <Ionicons name="eye-off" size={7} color={colors.error} />
+                          <Text style={{ color: colors.error, fontSize: type.xs, fontWeight: '800' }}>
+                            Hidden
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
                   </View>
@@ -393,6 +406,22 @@ export default function AdminItems() {
               })}
             </View>
 
+            <View style={styles.availabilityRow}>
+              <View>
+                <Text style={styles.tagLabel}>Visibility</Text>
+                <Text style={styles.availabilityDesc}>
+                  {isAvailable ? 'Visible to Master' : 'Hidden from Menu'}
+                </Text>
+              </View>
+              <Pressable
+                testID={`admin-toggle-availability-${editingItem?.id}`}
+                onPress={() => setIsAvailable(!isAvailable)}
+                style={[styles.toggle, isAvailable && styles.toggleOn]}
+              >
+                <View style={[styles.toggleThumb, isAvailable && styles.toggleThumbOn]} />
+              </Pressable>
+            </View>
+
             <Pressable
               testID="admin-save-item-btn"
               onPress={save}
@@ -485,6 +514,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   tagText: { fontSize: type.xs, fontWeight: '800', letterSpacing: 0.2 },
+  unavailableBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.error + '18',
+  },
   editBtn: {
     width: 30,
     height: 30,
@@ -580,6 +618,41 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   tagChipText: { fontSize: type.sm, fontWeight: '800' },
+  availabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surfaceTertiary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
+  },
+  availabilityDesc: {
+    marginTop: 2,
+    fontSize: type.sm,
+    color: colors.muted,
+  },
+  toggle: {
+    width: 50,
+    height: 28,
+    borderRadius: radius.pill,
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleOn: {
+    backgroundColor: colors.brand,
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.pill,
+    backgroundColor: colors.onSurface,
+  },
+  toggleThumbOn: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.onBrandPrimary,
+  },
   saveBtn: {
     backgroundColor: colors.brand,
     paddingVertical: spacing.md,

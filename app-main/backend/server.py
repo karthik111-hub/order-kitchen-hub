@@ -91,6 +91,7 @@ class MenuItem(BaseModel):
     category: str
     tag: Optional[ItemTag] = None
     image_base64: Optional[str] = None
+    is_available: bool = True
     created_at: str = Field(default_factory=now_iso)
 
 
@@ -100,6 +101,7 @@ class MenuItemCreate(BaseModel):
     category: str
     tag: Optional[ItemTag] = None
     image_base64: Optional[str] = None
+    is_available: bool = True
 
 
 class MenuItemUpdate(BaseModel):
@@ -107,6 +109,7 @@ class MenuItemUpdate(BaseModel):
     price: float
     tag: Optional[ItemTag] = None
     image_base64: Optional[str] = None
+    is_available: Optional[bool] = None
 
 
 class OrderItem(BaseModel):
@@ -241,10 +244,13 @@ async def delete_category(cat_id: str):
 
 # Menu
 @api_router.get("/menu", response_model=List[MenuItem])
-async def list_menu(category: Optional[str] = None):
+async def list_menu(category: Optional[str] = None, show_all: bool = False):
     query = {}
     if category:
         query["category"] = category
+    # Only filter by is_available unless show_all is True (for admin editing)
+    if not show_all:
+        query["is_available"] = True
     items = await db.menu_items.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return [MenuItem(**it) for it in items]
 
@@ -260,14 +266,17 @@ async def create_menu_item(payload: MenuItemCreate):
 
 @api_router.patch("/menu/{item_id}", response_model=MenuItem)
 async def update_menu_item(item_id: str, payload: MenuItemUpdate):
+    update_dict = {
+        "name": payload.name.strip(),
+        "price": payload.price,
+        "tag": payload.tag,
+        "image_base64": payload.image_base64,
+    }
+    if payload.is_available is not None:
+        update_dict["is_available"] = payload.is_available
     result = await db.menu_items.find_one_and_update(
         {"id": item_id},
-        {"$set": {
-            "name": payload.name.strip(),
-            "price": payload.price,
-            "tag": payload.tag,
-            "image_base64": payload.image_base64,
-        }},
+        {"$set": update_dict},
         return_document=True,
         projection={"_id": 0},
     )

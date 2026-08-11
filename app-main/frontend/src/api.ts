@@ -17,6 +17,7 @@ export type MenuItem = {
   category: string;
   tag?: ItemTag | null;
   image_base64?: string | null;
+  is_available: boolean;
   created_at: string;
 };
 
@@ -107,6 +108,7 @@ export const api = {
     price: number;
     tag?: ItemTag | null;
     image_base64?: string | null;
+    is_available?: boolean;
   }) =>
     fetch(`${API}/menu/${id}`, {
       method: 'PATCH',
