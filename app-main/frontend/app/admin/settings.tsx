@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import * as SecureStore from 'expo-secure-store';
+// Use localStorage instead of SecureStore for web compatibility
 import { api } from '@/src/api';
 import { colors, radius, spacing, type, shadow } from '@/src/theme';
 

@@ -24,24 +24,35 @@ export default function RootLayout() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Use localStorage for web, which works in Expo web
+        // Use localStorage for web
         const storedRole = typeof window !== 'undefined' ? localStorage.getItem("userRole") : null;
         
         // Extract first segment from pathname
         const segments = pathname.split("/").filter(Boolean);
         const currentSegment = segments[0];
 
-        // If trying to access protected routes without authentication
+        // If trying to access protected routes
         if (["admin", "master", "chef"].includes(currentSegment)) {
-          if (!storedRole || storedRole !== currentSegment) {
-            console.log(`Auth failed: segment=${currentSegment}, storedRole=${storedRole}`);
+          // Check if user has valid role for this route
+          if (!storedRole) {
+            // No authentication at all
+            console.log(`No auth found for segment: ${currentSegment}`);
             router.replace("/");
             return;
           }
+          
+          if (storedRole !== currentSegment) {
+            // Logged in but with wrong role
+            console.log(`Role mismatch: trying to access ${currentSegment} but authenticated as ${storedRole}`);
+            router.replace("/");
+            return;
+          }
+          
+          // Valid role for this route - allow access
+          console.log(`Auth valid: ${storedRole} accessing /${storedRole}`);
         }
       } catch (e) {
         console.error("Auth check error:", e);
-        router.replace("/");
       }
     };
 
