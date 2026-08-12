@@ -1,8 +1,40 @@
-import { Tabs } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, type } from '@/src/theme';
 
 export default function ChefLayout() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const storedRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+        
+        if (storedRole !== 'chef') {
+          console.log(`Auth failed for chef: storedRole=${storedRole}`);
+          router.replace('/');
+          return;
+        }
+        
+        console.log('Chef auth valid');
+      } catch (e) {
+        console.error('Chef auth check error:', e);
+        router.replace('/');
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    setTimeout(() => {
+      checkAuth();
+    }, 0);
+  }, [router]);
+
+  if (!authChecked) return null;
+
   return (
     <Tabs
       screenOptions={{
