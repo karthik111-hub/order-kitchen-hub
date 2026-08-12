@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useRouter, useSegments } from "expo-router";
+import { useRouter, usePathname } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { LogBox } from "react-native";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
@@ -14,8 +14,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded, error] = useIconFonts();
   const router = useRouter();
-  const segments = useSegments();
-  const [isChecking, setIsChecking] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (loaded || error) {
@@ -27,24 +26,27 @@ export default function RootLayout() {
     const checkAuth = async () => {
       try {
         const storedRole = await SecureStore.getItemAsync("userRole");
+        
+        // Extract first segment from pathname
+        const segments = pathname.split("/").filter(Boolean);
         const currentSegment = segments[0];
 
         // If trying to access protected routes without authentication
         if (["admin", "master", "chef"].includes(currentSegment)) {
           if (!storedRole || storedRole !== currentSegment) {
-            // Redirect to login
+            console.log(`Auth failed: segment=${currentSegment}, storedRole=${storedRole}`);
             router.replace("/");
+            return;
           }
         }
       } catch (e) {
         console.error("Auth check error:", e);
-      } finally {
-        setIsChecking(false);
+        router.replace("/");
       }
     };
 
     checkAuth();
-  }, [segments, router]);
+  }, [pathname, router]);
 
   // If the CDN is unreachable we fall through on error rather than wedging
   // the app — icons will tofu, but the app still boots.
