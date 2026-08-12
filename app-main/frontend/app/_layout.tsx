@@ -1,29 +1,50 @@
+import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useRouter, useSegments } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { LogBox } from "react-native";
-
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 
+// Disable logbox errors
+LogBox.ignoreAllLogs(true);
 
-// Disable logbox errors etc so that users can see the app
-// and agent works as expected.
-LogBox.ignoreAllLogs(true)
-
-// Keep the native splash visible from cold start until icon fonts register.
-// Required because @expo/vector-icons' componentDidMount fallback fires
-// Font.loadAsync against a broken vendor path if any <Icon> mounts before
-// the family is registered — which throws on Android Expo Go.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useIconFonts();
+  const router = useRouter();
+  const segments = useSegments();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync();
     }
   }, [loaded, error]);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const storedRole = await SecureStore.getItemAsync("userRole");
+        const currentSegment = segments[0];
+
+        // If trying to access protected routes without authentication
+        if (["admin", "master", "chef"].includes(currentSegment)) {
+          if (!storedRole || storedRole !== currentSegment) {
+            // Redirect to login
+            router.replace("/");
+          }
+        }
+      } catch (e) {
+        console.error("Auth check error:", e);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    checkAuth();
+  }, [segments, router]);
 
   // If the CDN is unreachable we fall through on error rather than wedging
   // the app — icons will tofu, but the app still boots.

@@ -15,8 +15,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import * as SecureStore from 'expo-secure-store';
 import { api } from '@/src/api';
 import { colors, radius, spacing, type, shadow } from '@/src/theme';
 
@@ -24,6 +25,7 @@ const formatDate = (d: Date) => d.toISOString().split('T')[0];
 const todayDate = formatDate(new Date());
 
 export default function AdminSettings() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
   const [masked, setMasked] = useState<string | null>(null);
@@ -97,6 +99,25 @@ export default function AdminSettings() {
 
   const openDocs = () =>
     Linking.openURL('https://dashboard.razorpay.com/app/keys').catch(() => {});
+
+  const handleLogout = async () => {
+    Alert.alert('Sign out?', 'You will be logged out and return to the login screen.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await SecureStore.deleteItemAsync('userRole');
+            router.replace('/');
+          } catch (e) {
+            console.error('Logout error:', e);
+            router.replace('/');
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -289,6 +310,17 @@ export default function AdminSettings() {
               </Pressable>
             </View>
           </Modal>
+
+          <View style={styles.card}>
+            <Pressable
+              testID="logout-btn"
+              onPress={handleLogout}
+              style={styles.logoutBtn}
+            >
+              <Ionicons name="log-out-outline" size={16} color={colors.error} />
+              <Text style={styles.logoutBtnText}>Sign out</Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -446,6 +478,22 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     color: colors.muted,
     fontWeight: '700',
+    fontSize: type.base,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceTertiary,
+    borderWidth: 1.5,
+    borderColor: colors.error,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+  },
+  logoutBtnText: {
+    color: colors.error,
+    fontWeight: '800',
     fontSize: type.base,
   },
 });
