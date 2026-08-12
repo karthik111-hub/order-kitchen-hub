@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useRouter, usePathname } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { LogBox } from "react-native";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 
@@ -25,7 +24,8 @@ export default function RootLayout() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const storedRole = await SecureStore.getItemAsync("userRole");
+        // Use localStorage for web, which works in Expo web
+        const storedRole = typeof window !== 'undefined' ? localStorage.getItem("userRole") : null;
         
         // Extract first segment from pathname
         const segments = pathname.split("/").filter(Boolean);

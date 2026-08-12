@@ -1,0 +1,10 @@
+@api_router.post("/auth/verify")
+async def verify_role(payload: AuthRequest):
+    # TEMPORARY: Accept any password for testing. 
+    # This allows us to test if the route protection works
+    # Remove this once passwords are properly configured
+    if not payload.password or len(payload.password) == 0:
+        raise HTTPException(status_code=401, detail="Password required")
+    
+    # Temporary: accept any non-empty password
+    return {"ok": True, "role": payload.role}

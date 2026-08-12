@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as SecureStore from 'expo-secure-store';
 import { api, Role } from '@/src/api';
 import { colors, spacing, radius, type, shadow } from '@/src/theme';
 
@@ -83,8 +82,10 @@ export default function RoleSelect() {
       await api.verifyRole(selected.role, password);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      // Store role in SecureStore
-      await SecureStore.setItemAsync('userRole', selected.role);
+      // Store role in localStorage (works on web)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('userRole', selected.role);
+      }
       
       const role = selected.role;
       setSelected(null);
