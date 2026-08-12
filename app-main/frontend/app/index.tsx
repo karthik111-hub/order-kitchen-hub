@@ -100,99 +100,112 @@ export default function RoleSelect() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <View style={styles.brandBadge}>
-          <Ionicons name="restaurant" size={12} color={colors.brand} />
-          <Text style={styles.brandBadgeText}>Nanu marchipoyava mama...</Text>
-        </View>
-        <Text style={styles.title}>Who's on duty?</Text>
-        <Text style={styles.subtitle}>Pick your role to jump straight into the flow.</Text>
-      </View>
-
-      <View style={styles.cards}>
-        {OPTIONS.map(opt => (
-          <Pressable
-            key={opt.role}
-            testID={`role-${opt.role}-card`}
-            onPress={() => openPrompt(opt)}
-            style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-          >
-            <ImageBackground
-              source={{ uri: opt.image }}
-              style={styles.cardImage}
-              imageStyle={styles.cardImageInner}
-            >
-              <View style={styles.overlay} />
-              <View style={styles.cardContent}>
-                <View style={styles.iconPill}>
-                  <Ionicons name={opt.icon} size={14} color={colors.onBrandPrimary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>{opt.title}</Text>
-                  <Text style={styles.cardSub}>{opt.sub}</Text>
-                </View>
-                <Ionicons name="arrow-forward" size={16} color={colors.onBrandPrimary} />
-              </View>
-            </ImageBackground>
-          </Pressable>
-        ))}
-      </View>
-
-      <Modal transparent visible={!!selected} animationType="slide" onRequestClose={closePrompt}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalRoot}
-        >
-          <Pressable style={styles.backdrop} onPress={closePrompt} />
-          <View style={styles.sheet}>
-            <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>
-              {selected?.title} sign in
-            </Text>
-            <Text style={styles.sheetSub}>
-              Enter the {selected?.title.toLowerCase()} password to continue.
-            </Text>
-            <TextInput
-              testID="role-password-input"
-              placeholder="Password"
-              placeholderTextColor={colors.muted}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoFocus
-              onSubmitEditing={submit}
-              returnKeyType="go"
-              style={styles.input}
-            />
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            <Pressable
-              testID="role-password-submit"
-              onPress={submit}
-              disabled={submitting || password.length === 0}
-              style={[
-                styles.submitBtn,
-                (submitting || password.length === 0) && { opacity: 0.6 },
-              ]}
-            >
-              {submitting ? (
-                <ActivityIndicator color={colors.onBrandPrimary} />
-              ) : (
-                <Text style={styles.submitBtnText}>Continue</Text>
-              )}
-            </Pressable>
-            <Pressable onPress={closePrompt} style={styles.cancelBtn} disabled={submitting}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </Pressable>
+    <ImageBackground
+      source={require('@/assets/images/1000125264.png')}
+      style={styles.backgroundImage}
+      imageStyle={styles.backgroundImageInner}
+    >
+      <View style={styles.backgroundOverlay} />
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          <View style={styles.brandBadge}>
+            <Ionicons name="restaurant" size={12} color={colors.brand} />
+            <Text style={styles.brandBadgeText}>Nanu marchipoyava mama...</Text>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
-    </SafeAreaView>
+          <Text style={styles.title}>Who's on duty?</Text>
+          <Text style={styles.subtitle}>Pick your role to jump straight into the flow.</Text>
+        </View>
+
+        <View style={styles.cards}>
+          {OPTIONS.map(opt => (
+            <Pressable
+              key={opt.role}
+              testID={`role-${opt.role}-card`}
+              onPress={() => openPrompt(opt)}
+              style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+            >
+              <ImageBackground
+                source={{ uri: opt.image }}
+                style={styles.cardImage}
+                imageStyle={styles.cardImageInner}
+              >
+                <View style={styles.overlay} />
+                <View style={styles.cardContent}>
+                  <View style={styles.iconPill}>
+                    <Ionicons name={opt.icon} size={14} color={colors.onBrandPrimary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cardTitle}>{opt.title}</Text>
+                    <Text style={styles.cardSub}>{opt.sub}</Text>
+                  </View>
+                  <Ionicons name="arrow-forward" size={16} color={colors.onBrandPrimary} />
+                </View>
+              </ImageBackground>
+            </Pressable>
+          ))}
+        </View>
+
+        <Modal transparent visible={!!selected} animationType="slide" onRequestClose={closePrompt}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalRoot}
+          >
+            <Pressable style={styles.backdrop} onPress={closePrompt} />
+            <View style={styles.sheet}>
+              <View style={styles.handle} />
+              <Text style={styles.sheetTitle}>
+                {selected?.title} sign in
+              </Text>
+              <Text style={styles.sheetSub}>
+                Enter the {selected?.title.toLowerCase()} password to continue.
+              </Text>
+              <TextInput
+                testID="role-password-input"
+                placeholder="Password"
+                placeholderTextColor={colors.muted}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoFocus
+                onSubmitEditing={submit}
+                returnKeyType="go"
+                style={styles.input}
+              />
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+              <Pressable
+                testID="role-password-submit"
+                onPress={submit}
+                disabled={submitting || password.length === 0}
+                style={[
+                  styles.submitBtn,
+                  (submitting || password.length === 0) && { opacity: 0.6 },
+                ]}
+              >
+                {submitting ? (
+                  <ActivityIndicator color={colors.onBrandPrimary} />
+                ) : (
+                  <Text style={styles.submitBtnText}>Continue</Text>
+                )}
+              </Pressable>
+              <Pressable onPress={closePrompt} style={styles.cancelBtn} disabled={submitting}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.surface, paddingHorizontal: spacing.xl },
+  backgroundImage: { flex: 1 },
+  backgroundImageInner: { resizeMode: 'cover' },
+  backgroundOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  },
+  container: { flex: 1, paddingHorizontal: spacing.xl },
   header: { marginTop: spacing.lg, marginBottom: spacing.lg },
   brandBadge: {
     flexDirection: 'row',
