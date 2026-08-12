@@ -1,7 +1,6 @@
-import { useEffect } from "react";
-import { Stack } from "expo-router";
+import { useEffect, useState } from "react";
+import { Stack, useRouter, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useRouter, usePathname } from "expo-router";
 import { LogBox } from "react-native";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 
@@ -14,6 +13,7 @@ export default function RootLayout() {
   const [loaded, error] = useIconFonts();
   const router = useRouter();
   const pathname = usePathname();
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     if (loaded || error) {
@@ -22,7 +22,9 @@ export default function RootLayout() {
   }, [loaded, error]);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    if (!loaded && !error) return;
+
+    const checkAuth = () => {
       try {
         // Use localStorage for web
         const storedRole = typeof window !== 'undefined' ? localStorage.getItem("userRole") : null;
@@ -53,11 +55,16 @@ export default function RootLayout() {
         }
       } catch (e) {
         console.error("Auth check error:", e);
+      } finally {
+        setAuthChecked(true);
       }
     };
 
-    checkAuth();
-  }, [pathname, router]);
+    // Only check auth after layout is mounted
+    setTimeout(() => {
+      checkAuth();
+    }, 0);
+  }, [loaded, error, pathname, router]);
 
   // If the CDN is unreachable we fall through on error rather than wedging
   // the app — icons will tofu, but the app still boots.
