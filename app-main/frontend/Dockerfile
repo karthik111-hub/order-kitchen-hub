@@ -22,6 +22,9 @@ WORKDIR /app
 # Copy dist folder from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy public folder with static assets
+COPY --from=builder /app/public ./public
+
 # Install express
 RUN npm init -y && npm install express
 
