@@ -175,6 +175,9 @@ export default function ChefPreparing() {
                       >
                         #{o.token_number}
                       </Text>
+                      <Text style={styles.headerSubText} numberOfLines={1}>
+                        {shortId(o.id)}
+                      </Text>
                       {o.table_number ? (
                         <Text style={styles.headerSubText} numberOfLines={1}>
                           T-{o.table_number}
@@ -239,7 +242,10 @@ export default function ChefPreparing() {
               <View key={order.id} style={styles.orderCard}>
                 <View style={styles.orderHeader}>
                   <View style={styles.flex1}>
-                    <Text style={styles.orderId}>#{order.token_number}</Text>
+                    <View style={styles.orderIdRow}>
+                      <Text style={styles.orderId}>#{order.token_number}</Text>
+                      <Text style={styles.orderNumber}>{shortId(order.id)}</Text>
+                    </View>
                     {order.table_number && (
                       <Text style={styles.tableNumber}>Table {order.table_number}</Text>
                     )}
@@ -413,10 +419,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  orderIdRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   orderId: {
     fontSize: type.base,
     fontWeight: '800',
     color: colors.onSurface,
+  },
+  orderNumber: {
+    fontSize: type.xs,
+    fontWeight: '600',
+    color: colors.muted,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: radius.sm,
   },
   tableNumber: {
     fontSize: type.sm,
