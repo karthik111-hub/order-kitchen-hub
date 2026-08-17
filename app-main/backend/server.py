@@ -320,7 +320,7 @@ async def create_order(payload: OrderCreate):
         order_number = f"{now:%d%m%Y}{token_number}"
 
         order = Order(
-            order_number=order_number,
+            order_number=order_ID,
             token_number=token_number,
             items=payload.items,
             total=round(total, 2),
@@ -476,7 +476,7 @@ async def rzp_finalize(intent_id: str, payload: FinalizePayload):
     total = sum(i["price"] * i["quantity"] for i in intent["items"])
     token_number = await get_next_token_number()
     order = Order(
-        order_number=order_number,
+        order_number=order_ID,
         token_number=token_number,
         items=[OrderItem(**i) for i in intent["items"]],
         total=round(total, 2),
