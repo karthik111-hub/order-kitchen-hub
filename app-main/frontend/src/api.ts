@@ -17,6 +17,7 @@ export type MenuItem = {
   category: string;
   tag?: ItemTag | null;
   image_base64?: string | null;
+  is_available: boolean;
   created_at: string;
 };
 
@@ -33,6 +34,7 @@ export type PaymentStatus = 'unpaid' | 'paid';
 
 export type Order = {
   id: string;
+  token_number: number;
   items: OrderItem[];
   total: number;
   status: OrderStatus;
@@ -76,11 +78,20 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     }).then(r => handle<Category>(r)),
+  updateCategory: (id: string, name: string) =>
+    fetch(`${API}/categories/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }).then(r => handle<Category>(r)),
   deleteCategory: (id: string) =>
     fetch(`${API}/categories/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
 
-  listMenu: (category?: string) => {
-    const q = category ? `?category=${encodeURIComponent(category)}` : '';
+  listMenu: (category?: string, admin?: boolean) => {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (admin) params.append('admin', 'true');
+    const q = params.toString() ? `?${params.toString()}` : '';
     return fetch(`${API}/menu${q}`).then(r => handle<MenuItem[]>(r));
   },
   createMenuItem: (body: {
@@ -92,6 +103,18 @@ export const api = {
   }) =>
     fetch(`${API}/menu`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(r => handle<MenuItem>(r)),
+  updateMenuItem: (id: string, body: {
+    name: string;
+    price: number;
+    tag?: ItemTag | null;
+    image_base64?: string | null;
+    is_available?: boolean;
+  }) =>
+    fetch(`${API}/menu/${id}`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(r => handle<MenuItem>(r)),
@@ -118,8 +141,21 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     }).then(r => handle<Order>(r)),
+  deleteOrder: (id: string) =>
+    fetch(`${API}/orders/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
 
-  // Razorpay
+  saveDraft: (body: { items: OrderItem[]; table_number?: string; notes?: string }) =>
+    fetch(`${API}/drafts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(r => handle<Order>(r)),
+  listDrafts: () => fetch(`${API}/drafts`).then(r => handle<Order[]>(r)),
+  sendDraft: (id: string) =>
+    fetch(`${API}/drafts/${id}/send`, { method: 'POST' }).then(r => handle<{ ok: boolean; order_id: string }>(r)),
+  deleteDraft: (id: string) =>
+    fetch(`${API}/drafts/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
+
   rzpStatus: () =>
     fetch(`${API}/razorpay/settings/status`).then(r =>
       handle<{ configured: boolean; key_id_masked: string | null }>(r),
@@ -153,8 +189,11 @@ export const api = {
       }>(r),
     ),
 
-  dailyReportUrl: (dateISO?: string) => {
-    const q = dateISO ? `?date=${dateISO}` : '';
+  dailyReportUrl: (fromDate?: string, toDate?: string) => {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from', fromDate);
+    if (toDate) params.append('to', toDate);
+    const q = params.toString() ? `?${params.toString()}` : '';
     return `${API}/reports/daily.xlsx${q}`;
   },
 };

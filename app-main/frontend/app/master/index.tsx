@@ -46,6 +46,7 @@ export default function MasterMenu() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const { cart, lines, totalQty, totalPrice } = useCart();
+  const [savingDraft, setSavingDraft] = useState(false);
   const [tableNumber, setTableNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [placing, setPlacing] = useState(false);
@@ -198,6 +199,28 @@ export default function MasterMenu() {
       setPaying(false);
       setPendingIntentId(null);
       Alert.alert('Payment error', e?.message ?? 'Please try again');
+    }
+  };
+  
+    const saveDraft = async () => {
+    if (lines.length === 0) return;
+    try {
+      setSavingDraft(true);
+      await api.saveDraft({
+        items: lines,
+        table_number: tableNumber || undefined,
+        notes: notes || undefined,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      cartStore.clear();
+      setTableNumber('');
+      setNotes('');
+      setCartOpen(false);
+      Alert.alert('Success', 'Order saved as draft');
+    } catch (e: any) {
+      Alert.alert('Failed to save draft', e?.message ?? 'Try again');
+    } finally {
+      setSavingDraft(false);
     }
   };
 
@@ -521,6 +544,24 @@ export default function MasterMenu() {
                 </>
               )}
             </Pressable>
+			<Pressable
+              testID="save-draft-btn"
+              onPress={saveDraft}
+              disabled={savingDraft || placing || paying}
+              style={[
+                styles.draftBtn,
+                (savingDraft || placing || paying) && { opacity: 0.55 },
+              ]}
+            >
+              {savingDraft ? (
+                <ActivityIndicator color={colors.muted} />
+              ) : (
+                <>
+                  <Ionicons name="document-text-outline" size={14} color={colors.muted} />
+                  <Text style={styles.draftBtnText}>Save as Draft</Text>
+                </>
+              )}
+            </Pressable>
             {!payConfigured && (
               <Text style={styles.payHint}>Ask the admin to add Razorpay keys in Settings.</Text>
             )}
@@ -530,6 +571,7 @@ export default function MasterMenu() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
@@ -812,4 +854,17 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: type.sm,
   },
+  draftBtn: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1.5,
+    borderColor: colors.muted,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+  },
+  draftBtnText: { color: colors.muted, fontWeight: '700', fontSize: type.base },
 });

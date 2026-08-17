@@ -81,6 +81,12 @@ export default function RoleSelect() {
     try {
       await api.verifyRole(selected.role, password);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // Store role in localStorage (works on web)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('userRole', selected.role);
+      }
+      
       const role = selected.role;
       setSelected(null);
       setPassword('');
@@ -98,7 +104,7 @@ export default function RoleSelect() {
       <View style={styles.header}>
         <View style={styles.brandBadge}>
           <Ionicons name="restaurant" size={12} color={colors.brand} />
-          <Text style={styles.brandBadgeText}>ServeSync</Text>
+          <Text style={styles.brandBadgeText}>Nanu marchipoyava mama...</Text>
         </View>
         <Text style={styles.title}>Who's on duty?</Text>
         <Text style={styles.subtitle}>Pick your role to jump straight into the flow.</Text>
@@ -131,6 +137,12 @@ export default function RoleSelect() {
             </ImageBackground>
           </Pressable>
         ))}
+      </View>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          Personlized order and kitchen management app{'\n'}For customized and personalized apps do contact: krtheek@gmail.com
+        </Text>
       </View>
 
       <Modal transparent visible={!!selected} animationType="slide" onRequestClose={closePrompt}>
@@ -242,6 +254,20 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.onBrandPrimary, fontSize: type.xl, fontWeight: '800' },
   cardSub: { color: colors.onBrandPrimary, opacity: 0.9, fontSize: type.sm, marginTop: 2 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
+
+  footer: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  footerText: {
+    fontSize: type.xs,
+    color: colors.onSurfaceTertiary,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
 
   modalRoot: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },

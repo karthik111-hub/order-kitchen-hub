@@ -35,6 +35,15 @@ ROLE_PASSWORDS = {
 RAZORPAY_SETTINGS_ID = "razorpay"
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 api_router = APIRouter(prefix="/api")
 
 
@@ -42,10 +51,19 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+async def get_next_token_number() -> int:
+    counter = await db.order_counters.find_one_and_update(
+        {"_id": "token_number"},
+        {"$inc": {"value": 1}},
+        return_document=True,
+        upsert=True
+    )
+    return counter["value"]
+
+
 def make_order_id() -> str:
-    """Format: YYYYMMDD-HHMMSS-XXXXXXXX (8-char random hex)."""
     now = datetime.now(timezone.utc)
-    return f"{now:%Y%m%d}-{now:%H%M%S}-{uuid.uuid4().hex[:8].upper()}"
+    return f"{now:%d-%m-%Y-%H:%M:%S}-{uuid.uuid4().hex[:8].upper()}"
 
 
 # ---------- Models ----------
@@ -59,6 +77,10 @@ class CategoryCreate(BaseModel):
     name: str
 
 
+class CategoryUpdate(BaseModel):
+    name: str
+
+
 ItemTag = Literal["most_selling", "must_buy"]
 
 
@@ -69,6 +91,7 @@ class MenuItem(BaseModel):
     category: str
     tag: Optional[ItemTag] = None
     image_base64: Optional[str] = None
+    is_available: bool = True
     created_at: str = Field(default_factory=now_iso)
 
 
@@ -78,6 +101,15 @@ class MenuItemCreate(BaseModel):
     category: str
     tag: Optional[ItemTag] = None
     image_base64: Optional[str] = None
+    is_available: bool = True
+
+
+class MenuItemUpdate(BaseModel):
+    name: str
+    price: float
+    tag: Optional[ItemTag] = None
+    image_base64: Optional[str] = None
+    is_available: Optional[bool] = None
 
 
 class OrderItem(BaseModel):
@@ -90,6 +122,7 @@ class OrderItem(BaseModel):
 
 class Order(BaseModel):
     id: str = Field(default_factory=make_order_id)
+    token_number: int = 0
     items: List[OrderItem]
     total: float
     status: Literal["pending", "preparing", "completed", "cancelled"] = "pending"
@@ -178,6 +211,23 @@ async def create_category(payload: CategoryCreate):
     return cat
 
 
+@api_router.patch("/categories/{cat_id}", response_model=Category)
+async def update_category(cat_id: str, payload: CategoryUpdate):
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Category name required")
+    
+    result = await db.categories.find_one_and_update(
+        {"id": cat_id},
+        {"$set": {"name": name}},
+        return_document=True,
+        projection={"_id": 0},
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return Category(**result)
+
+
 @api_router.delete("/categories/{cat_id}")
 async def delete_category(cat_id: str):
     print(f"DEBUG: Attempting to delete category {cat_id}", flush=True)
@@ -194,10 +244,13 @@ async def delete_category(cat_id: str):
 
 # Menu
 @api_router.get("/menu", response_model=List[MenuItem])
-async def list_menu(category: Optional[str] = None):
+async def list_menu(category: Optional[str] = None, admin: bool = False):
     query = {}
     if category:
         query["category"] = category
+    # Only filter by is_available if admin=False (for master/normal users)
+    if not admin:
+        query["is_available"] = True
     items = await db.menu_items.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return [MenuItem(**it) for it in items]
 
@@ -211,6 +264,27 @@ async def create_menu_item(payload: MenuItemCreate):
     return item
 
 
+@api_router.patch("/menu/{item_id}", response_model=MenuItem)
+async def update_menu_item(item_id: str, payload: MenuItemUpdate):
+    update_dict = {
+        "name": payload.name.strip(),
+        "price": payload.price,
+        "tag": payload.tag,
+        "image_base64": payload.image_base64,
+    }
+    if payload.is_available is not None:
+        update_dict["is_available"] = payload.is_available
+    result = await db.menu_items.find_one_and_update(
+        {"id": item_id},
+        {"$set": update_dict},
+        return_document=True,
+        projection={"_id": 0},
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    return MenuItem(**result)
+
+
 @api_router.delete("/menu/{item_id}")
 async def delete_menu_item(item_id: str):
     result = await db.menu_items.delete_one({"id": item_id})
@@ -222,27 +296,38 @@ async def delete_menu_item(item_id: str):
 # Orders
 @api_router.get("/orders", response_model=List[Order])
 async def list_orders(status: Optional[str] = None):
-    query = {}
-    if status:
-        query["status"] = status
-    orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
-    return [Order(**o) for o in orders]
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
+        logger.info(f"Found {len(orders)} orders with status filter: {status}")
+        return [Order(**o) for o in orders]
+    except Exception as e:
+        logger.error(f"Error listing orders: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error listing orders: {str(e)}")  
 
 
 @api_router.post("/orders", response_model=Order)
 async def create_order(payload: OrderCreate):
-    if not payload.items:
-        raise HTTPException(status_code=400, detail="Order must contain at least one item")
-    total = sum(i.price * i.quantity for i in payload.items)
-    order = Order(
-        items=payload.items,
-        total=round(total, 2),
-        table_number=payload.table_number,
-        notes=payload.notes,
-        payment_status="unpaid",
-    )
-    await db.orders.insert_one(order.dict())
-    return order
+    try:
+        if not payload.items:
+            raise HTTPException(status_code=400, detail="Order must contain at least one item")
+        total = sum(i.price * i.quantity for i in payload.items)
+        token_number = await get_next_token_number()
+        order = Order(
+            token_number=token_number,
+            items=payload.items,
+            total=round(total, 2),
+            table_number=payload.table_number,
+            notes=payload.notes,
+            payment_status="unpaid",
+        )
+        await db.orders.insert_one(order.dict())
+        return order
+    except Exception as e:
+        logger.error(f"Error creating order: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
 
 
 @api_router.patch("/orders/{order_id}/status", response_model=Order)
@@ -259,12 +344,17 @@ async def update_order_status(order_id: str, payload: OrderStatusUpdate):
     return Order(**result)
 
 
-@api_router.get("/orders/{order_id}", response_model=Order)
-async def get_order(order_id: str):
-    o = await db.orders.find_one({"id": order_id}, {"_id": 0})
-    if not o:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return Order(**o)
+@api_router.delete("/orders/{order_id}")
+async def delete_order(order_id: str):
+    try:
+        result = await db.orders.delete_one({"id": order_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        logger.info(f"Order {order_id} deleted")
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"Error deleting order: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error deleting order: {str(e)}")
 
 
 # Razorpay settings
@@ -379,7 +469,9 @@ async def rzp_finalize(intent_id: str, payload: FinalizePayload):
 
     # Create the order marked as paid
     total = sum(i["price"] * i["quantity"] for i in intent["items"])
+    token_number = await get_next_token_number()
     order = Order(
+        token_number=token_number,
         items=[OrderItem(**i) for i in intent["items"]],
         total=round(total, 2),
         table_number=intent.get("table_number"),
@@ -527,100 +619,181 @@ async def rzp_checkout_page(intent_id: str):
 
 # Daily xlsx report
 @api_router.get("/reports/daily.xlsx")
-async def daily_report(date_str: Optional[str] = Query(None, alias="date")):
-    if date_str:
-        try:
-            target_date = date.fromisoformat(date_str)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
-    else:
-        target_date = datetime.now(timezone.utc).date()
+async def daily_report(
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to")
+):
+    try:
+        if from_date:
+            try:
+                start_date = date.fromisoformat(from_date)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="from must be YYYY-MM-DD")
+        else:
+            start_date = datetime.now(timezone.utc).date()
+        
+        if to_date:
+            try:
+                end_date = date.fromisoformat(to_date)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="to must be YYYY-MM-DD")
+        else:
+            end_date = start_date
+        
+        # If end_date is before start_date, swap them
+        if end_date < start_date:
+            start_date, end_date = end_date, start_date
+        
+        start = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        end = datetime.combine(end_date + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
 
-    start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-    end = start + timedelta(days=1)
+        orders = await db.orders.find(
+            {"created_at": {"$gte": start.isoformat(), "$lt": end.isoformat()}},
+            {"_id": 0},
+        ).sort("created_at", 1).to_list(5000)
 
-    orders = await db.orders.find(
-        {"created_at": {"$gte": start.isoformat(), "$lt": end.isoformat()}},
-        {"_id": 0},
-    ).sort("created_at", 1).to_list(5000)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Orders"
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Orders"
+        headers = [
+            "Token #", "Order ID", "Time (UTC)", "Table", "Items", "Item Count",
+            "Total (₹)", "Payment Status", "Order Status", "Payment ID", "Notes",
+        ]
+        ws.append(headers)
 
-    headers = [
-        "Order ID", "Time (UTC)", "Table", "Items", "Item Count",
-        "Total (₹)", "Payment Status", "Order Status", "Payment ID", "Notes",
-    ]
-    ws.append(headers)
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill("solid", fgColor="E07A5F")
+        for col_idx, _ in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="left", vertical="center")
 
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill("solid", fgColor="E07A5F")
-    for col_idx, _ in enumerate(headers, start=1):
-        cell = ws.cell(row=1, column=col_idx)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="left", vertical="center")
+        total_revenue_paid = 0.0
+        total_revenue_all = 0.0
 
-    total_revenue_paid = 0.0
-    total_revenue_all = 0.0
+        for o in orders:
+            items_summary = ", ".join(
+                f"{i['quantity']}× {i['name']}" for i in o.get("items", [])
+            )
+            item_count = sum(i.get("quantity", 0) for i in o.get("items", []))
+            pay_id = (o.get("payment") or {}).get("razorpay_payment_id", "")
+            ws.append([
+                o.get("token_number", ""),
+                o.get("id", ""),
+                o.get("created_at", ""),
+                o.get("table_number", "") or "",
+                items_summary,
+                item_count,
+                float(o.get("total", 0)),
+                o.get("payment_status", "unpaid"),
+                o.get("status", "pending"),
+                pay_id,
+                o.get("notes", "") or "",
+            ])
+            total_revenue_all += float(o.get("total", 0))
+            if o.get("payment_status") == "paid":
+                total_revenue_paid += float(o.get("total", 0))
 
-    for o in orders:
-        items_summary = ", ".join(
-            f"{i['quantity']}× {i['name']}" for i in o.get("items", [])
+        # Summary section
+        ws.append([])
+        date_range = f"{start_date.isoformat()} to {end_date.isoformat()}" if from_date or to_date else start_date.isoformat()
+        ws.append(["Summary", date_range])
+        ws.append(["Total orders", len(orders)])
+        ws.append(["Total revenue (₹)", round(total_revenue_all, 2)])
+        ws.append(["Paid revenue (₹)", round(total_revenue_paid, 2)])
+        ws.append(["Unpaid revenue (₹)", round(total_revenue_all - total_revenue_paid, 2)])
+
+        # Column widths
+        widths = [10, 30, 26, 8, 60, 12, 12, 16, 14, 26, 30]
+        for i, w in enumerate(widths, start=1):
+            ws.column_dimensions[chr(64 + i)].width = w
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        filename = f"servesync-report-{start_date.isoformat()}-to-{end_date.isoformat()}.xlsx"
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
-        item_count = sum(i.get("quantity", 0) for i in o.get("items", []))
-        pay_id = (o.get("payment") or {}).get("razorpay_payment_id", "")
-        ws.append([
-            o.get("id", ""),
-            o.get("created_at", ""),
-            o.get("table_number", "") or "",
-            items_summary,
-            item_count,
-            float(o.get("total", 0)),
-            o.get("payment_status", "unpaid"),
-            o.get("status", "pending"),
-            pay_id,
-            o.get("notes", "") or "",
-        ])
-        total_revenue_all += float(o.get("total", 0))
-        if o.get("payment_status") == "paid":
-            total_revenue_paid += float(o.get("total", 0))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating report: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}") 
 
-    # Summary section
-    ws.append([])
-    ws.append(["Summary", target_date.isoformat()])
-    ws.append(["Total orders", len(orders)])
-    ws.append(["Total revenue (₹)", round(total_revenue_all, 2)])
-    ws.append(["Paid revenue (₹)", round(total_revenue_paid, 2)])
-    ws.append(["Unpaid revenue (₹)", round(total_revenue_all - total_revenue_paid, 2)])
-
-    # Column widths
-    widths = [30, 26, 8, 60, 12, 12, 16, 14, 26, 30]
-    for i, w in enumerate(widths, start=1):
-        ws.column_dimensions[chr(64 + i)].width = w
-
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-
-    filename = f"servesync-report-{target_date.isoformat()}.xlsx"
-    return StreamingResponse(
-        buf,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+# Draft Orders
+@api_router.post("/drafts", response_model=Order)
+async def save_draft(payload: OrderCreate):
+    try:
+        if not payload.items:
+            raise HTTPException(status_code=400, detail="Draft must contain at least one item")
+        total = sum(i.price * i.quantity for i in payload.items)
+        draft_id = f"DRAFT-{uuid.uuid4().hex[:12]}"
+        draft = Order(
+            id=draft_id,
+            items=payload.items,
+            total=round(total, 2),
+            table_number=payload.table_number,
+            notes=payload.notes,
+            payment_status="unpaid",
+        )
+        await db.drafts.insert_one(draft.dict())
+        return draft
+    except Exception as e:
+        logger.error(f"Error saving draft: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error saving draft: {str(e)}")
 
 
+@api_router.get("/drafts", response_model=List[Order])
+async def list_drafts():
+    try:
+        drafts = await db.drafts.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+        return [Order(**d) for d in drafts]
+    except Exception as e:
+        logger.error(f"Error listing drafts: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error listing drafts: {str(e)}")
+
+
+@api_router.post("/drafts/{draft_id}/send")
+async def send_draft(draft_id: str):
+    try:
+        draft = await db.drafts.find_one({"id": draft_id}, {"_id": 0})
+        if not draft:
+            raise HTTPException(status_code=404, detail="Draft not found")
+        
+        token_number = await get_next_token_number()
+        order_dict = dict(draft)
+        order_dict["id"] = make_order_id()
+        order_dict["token_number"] = token_number
+        order_dict["status"] = "pending"
+        
+        await db.orders.insert_one(order_dict)
+        await db.drafts.delete_one({"id": draft_id})
+        return {"ok": True, "order_id": order_dict["id"]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending draft: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error sending draft: {str(e)}")
+
+
+@api_router.delete("/drafts/{draft_id}")
+async def delete_draft(draft_id: str):
+    try:
+        result = await db.drafts.delete_one({"id": draft_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Draft not found")
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"Error deleting draft: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error deleting draft: {str(e)}")
+        
 app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 logging.basicConfig(
     level=logging.INFO,

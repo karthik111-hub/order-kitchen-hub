@@ -1,8 +1,39 @@
-import { Tabs } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, type } from '@/src/theme';
 
 export default function MasterLayout() {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const storedRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+        
+        if (storedRole !== 'master') {
+          console.log(`Auth failed for master: storedRole=${storedRole}`);
+          router.replace('/');
+          return;
+        }
+        
+        console.log('Master auth valid');
+      } catch (e) {
+        console.error('Master auth check error:', e);
+        router.replace('/');
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    setTimeout(() => {
+      checkAuth();
+    }, 0);
+  }, [router]);
+
+  if (!authChecked) return null;
+
   return (
     <Tabs
       screenOptions={{
@@ -36,6 +67,14 @@ export default function MasterLayout() {
           title: 'Orders',
           tabBarIcon: ({ color }) => <Ionicons name="receipt-outline" size={18} color={color} />,
           tabBarButtonTestID: 'master-tab-orders',
+        }}
+      />
+      <Tabs.Screen
+        name="drafts"
+        options={{
+          title: 'Drafts',
+          tabBarIcon: ({ color }) => <Ionicons name="document-outline" size={18} color={color} />,
+          tabBarButtonTestID: 'master-tab-drafts',
         }}
       />
     </Tabs>

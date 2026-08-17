@@ -33,17 +33,19 @@ export default function AdminItems() {
   const [loading, setLoading] = useState(true);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
   // form state
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [tag, setTag] = useState<ItemTag | null>(null);
+  const [isAvailable, setIsAvailable] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [c, i] = await Promise.all([api.listCategories(), api.listMenu()]);
+      const [c, i] = await Promise.all([api.listCategories(), api.listMenu(undefined, true)]);
       setCats(c);
       setItems(i);
       if (!selectedCat && c.length > 0) setSelectedCat(c[0].name);
@@ -70,10 +72,23 @@ export default function AdminItems() {
   );
 
   const openForm = () => {
+    setEditingItem(null);
     setName('');
     setPrice('');
     setImageBase64(null);
     setTag(null);
+    setIsAvailable(true);
+    setFormOpen(true);
+  };
+
+  const openEditForm = (item: MenuItem) => {
+    console.log('[DEBUG] Edit button clicked for item:', item.id, item.name);
+    setEditingItem(item);
+    setName(item.name);
+    setPrice(item.price.toString());
+    setImageBase64(item.image_base64 || null);
+    setTag(item.tag || null);
+    setIsAvailable(item.is_available);
     setFormOpen(true);
   };
 
@@ -111,17 +126,35 @@ export default function AdminItems() {
     }
     try {
       setSaving(true);
-      await api.createMenuItem({
-        name: name.trim(),
-        price: priceNum,
-        category: selectedCat,
-        tag,
-        image_base64: imageBase64,
-      });
+      
+      if (editingItem) {
+        console.log('[DEBUG] Updating item:', editingItem.id);
+        await api.updateMenuItem(editingItem.id, {
+          name: name.trim(),
+          price: priceNum,
+          tag,
+          image_base64: imageBase64,
+          is_available: isAvailable,
+        });
+        console.log('[DEBUG] Item updated successfully');
+      } else {
+        console.log('[DEBUG] Creating new item');
+        await api.createMenuItem({
+          name: name.trim(),
+          price: priceNum,
+          category: selectedCat,
+          tag,
+          image_base64: imageBase64,
+          is_available: isAvailable,
+        });
+        console.log('[DEBUG] Item created successfully');
+      }
+      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setFormOpen(false);
       load();
     } catch (e: any) {
+      console.error('[DEBUG] Save error:', e);
       Alert.alert('Save failed', e?.message ?? 'Try again');
     } finally {
       setSaving(false);
@@ -146,6 +179,24 @@ export default function AdminItems() {
     } catch (e: any) {
       console.error('[DEBUG] Delete error:', e);
       alert('Delete failed: ' + (e?.message || 'Unknown error'));
+    }
+  };
+
+  const toggleAvailability = async (item: MenuItem) => {
+    try {
+      console.log('[DEBUG] Toggling availability for item:', item.id);
+      await api.updateMenuItem(item.id, {
+        name: item.name,
+        price: item.price,
+        tag: item.tag,
+        image_base64: item.image_base64,
+        is_available: !item.is_available,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      load();
+    } catch (e: any) {
+      console.error('[DEBUG] Toggle error:', e);
+      Alert.alert('Failed to toggle', e?.message ?? 'Try again');
     }
   };
 
@@ -242,9 +293,38 @@ export default function AdminItems() {
                           </Text>
                         </View>
                       ) : null}
+                      {!item.is_available && (
+                        <View style={styles.hiddenBadge}>
+                          <Ionicons name="eye-off" size={7} color={colors.error} />
+                          <Text style={styles.hiddenBadgeText}>Hidden</Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
                   </View>
+                  <Pressable
+                    testID={`admin-item-toggle-${item.id}`}
+                    onPress={() => toggleAvailability(item)}
+                    style={[
+                      styles.toggleBtn,
+                      { backgroundColor: item.is_available ? colors.brand : colors.error },
+                    ]}
+                    hitSlop={8}
+                  >
+                    <Ionicons
+                      name={item.is_available ? 'eye-outline' : 'eye-off-outline'}
+                      size={14}
+                      color={colors.onBrandPrimary}
+                    />
+                  </Pressable>
+                  <Pressable
+                    testID={`admin-item-edit-${item.id}`}
+                    onPress={() => openEditForm(item)}
+                    style={styles.editBtn}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="pencil-outline" size={14} color={colors.brand} />
+                  </Pressable>
                   <Pressable
                     testID={`admin-item-delete-${item.id}`}
                     onPress={() => remove(item)}
@@ -286,7 +366,9 @@ export default function AdminItems() {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>New item in {selectedCat}</Text>
+            <Text style={styles.sheetTitle}>
+              {editingItem ? `Edit ${editingItem.name}` : `New item in ${selectedCat}`}
+            </Text>
 
             <Pressable
               testID="admin-pick-image-btn"
@@ -355,6 +437,22 @@ export default function AdminItems() {
               })}
             </View>
 
+            <View style={styles.availabilityRow}>
+              <View>
+                <Text style={styles.tagLabel}>Visibility</Text>
+                <Text style={styles.availabilityDesc}>
+                  {isAvailable ? 'Visible to Master' : 'Hidden from Menu'}
+                </Text>
+              </View>
+              <Pressable
+                testID={`admin-toggle-availability-${editingItem?.id}`}
+                onPress={() => setIsAvailable(!isAvailable)}
+                style={[styles.toggle, isAvailable && styles.toggleOn]}
+              >
+                <View style={[styles.toggleThumb, isAvailable && styles.toggleThumbOn]} />
+              </Pressable>
+            </View>
+
             <Pressable
               testID="admin-save-item-btn"
               onPress={save}
@@ -364,7 +462,9 @@ export default function AdminItems() {
               {saving ? (
                 <ActivityIndicator color={colors.onBrandPrimary} />
               ) : (
-                <Text style={styles.saveBtnText}>Add to menu</Text>
+                <Text style={styles.saveBtnText}>
+                  {editingItem ? 'Update item' : 'Add to menu'}
+                </Text>
               )}
             </Pressable>
             <Pressable onPress={() => setFormOpen(false)} style={styles.cancelBtn} disabled={saving}>
@@ -445,6 +545,35 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   tagText: { fontSize: type.xs, fontWeight: '800', letterSpacing: 0.2 },
+  hiddenBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.error + '22',
+  },
+  hiddenBadgeText: {
+    fontSize: type.xs,
+    fontWeight: '800',
+    color: colors.error,
+  },
+  editBtn: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    backgroundColor: '#E3F2FD',
+  },
+  toggleBtn: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+  },
   deleteBtn: {
     width: 30,
     height: 30,
@@ -532,6 +661,41 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   tagChipText: { fontSize: type.sm, fontWeight: '800' },
+  availabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surfaceTertiary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
+  },
+  availabilityDesc: {
+    marginTop: 2,
+    fontSize: type.sm,
+    color: colors.muted,
+  },
+  toggle: {
+    width: 50,
+    height: 28,
+    borderRadius: radius.pill,
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleOn: {
+    backgroundColor: colors.brand,
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.pill,
+    backgroundColor: colors.onSurface,
+  },
+  toggleThumbOn: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.onBrandPrimary,
+  },
   saveBtn: {
     backgroundColor: colors.brand,
     paddingVertical: spacing.md,
