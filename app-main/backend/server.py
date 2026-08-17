@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -183,6 +183,16 @@ async def root():
     return {"message": "ServeSync API"}
 
 
+@app.get("/krfoodcourt/guest")
+async def guest_menu():
+    """Serve the guest menu image"""
+    from fastapi.responses import FileResponse
+    menu_path = os.path.join(os.path.dirname(__file__), "../frontend/assets/images/Reddys_Menu_HD_page-0001.jpg")
+    if not os.path.exists(menu_path):
+        raise HTTPException(status_code=404, detail="Menu image not found")
+    return FileResponse(menu_path, media_type="image/jpeg")
+
+
 @api_router.post("/auth/verify")
 async def verify_role(payload: AuthRequest):
     expected = ROLE_PASSWORDS.get(payload.role, "")
@@ -320,7 +330,7 @@ async def create_order(payload: OrderCreate):
         order_number = f"{now:%d%m%Y}{token_number}"
 
         order = Order(
-            order_number=order_ID,
+            order_number=order_number,
             token_number=token_number,
             items=payload.items,
             total=round(total, 2),
@@ -475,8 +485,10 @@ async def rzp_finalize(intent_id: str, payload: FinalizePayload):
     # Create the order marked as paid
     total = sum(i["price"] * i["quantity"] for i in intent["items"])
     token_number = await get_next_token_number()
+    now = datetime.now(timezone.utc)
+    order_number = f"{now:%d%m%Y}{token_number}"
     order = Order(
-        order_number=order_ID,
+        order_number=order_number,
         token_number=token_number,
         items=[OrderItem(**i) for i in intent["items"]],
         total=round(total, 2),
