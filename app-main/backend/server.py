@@ -186,11 +186,11 @@ async def root():
 @app.get("/krfoodcourt/guest")
 async def guest_menu():
     """Serve the guest menu image"""
-    from fastapi.responses import FileResponse
-    menu_path = os.path.join(os.path.dirname(__file__), "../frontend/assets/images/Reddys_Menu_HD_page-0001.jpg")
-    if not os.path.exists(menu_path):
-        raise HTTPException(status_code=404, detail="Menu image not found")
-    return FileResponse(menu_path, media_type="image/jpeg")
+    # Use ROOT_DIR which points to backend directory
+    menu_path = ROOT_DIR.parent / "frontend" / "assets" / "images" / "Reddys_Menu_HD_page-0001.jpg"
+    if not menu_path.exists():
+        raise HTTPException(status_code=404, detail=f"Menu image not found at {menu_path}")
+    return FileResponse(str(menu_path), media_type="image/jpeg")
 
 
 @api_router.post("/auth/verify")
