@@ -42,6 +42,21 @@ app.get('/_health', (req, res) => {
   res.json({ status: 'ok', distExists: fs.existsSync(distPath), indexExists: fs.existsSync(indexPath) });
 });
 
+// Guest menu route
+app.get('/krfoodcourt/guest', (req, res) => {
+  const menuPath = path.join(publicPath, 'Reddys_Menu_HD_page-0001.jpg');
+  console.log('[LOG] /krfoodcourt/guest requested, serving:', menuPath);
+  
+  if (fs.existsSync(menuPath)) {
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(menuPath);
+  } else {
+    console.log('[ERROR] Menu image not found at:', menuPath);
+    res.status(404).json({ error: 'Menu image not found' });
+  }
+});
+
 // Catch-all route for SPA
 app.use((req, res, next) => {
   console.log('[LOG] Request:', req.method, req.path);
