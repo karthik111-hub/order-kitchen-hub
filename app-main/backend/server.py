@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -181,16 +181,6 @@ def _rzp_client(settings: dict) -> razorpay.Client:
 @api_router.get("/")
 async def root():
     return {"message": "ServeSync API"}
-
-
-@app.get("/krfoodcourt/guest")
-async def guest_menu():
-    """Serve the guest menu image"""
-    # Use ROOT_DIR which points to backend directory
-    menu_path = ROOT_DIR.parent / "frontend" / "assets" / "images" / "Reddys_Menu_HD_page-0001.jpg"
-    if not menu_path.exists():
-        raise HTTPException(status_code=404, detail=f"Menu image not found at {menu_path}")
-    return FileResponse(str(menu_path), media_type="image/jpeg")
 
 
 @api_router.post("/auth/verify")
