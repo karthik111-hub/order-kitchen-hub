@@ -180,12 +180,14 @@ def _rzp_client(settings: dict) -> razorpay.Client:
 
 def convert_utc_to_ist(utc_str: str) -> str:
     try:
-        from zoneinfo import ZoneInfo
+        # Parse UTC datetime
         dt = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
-        ist = ZoneInfo('Asia/Kolkata')
-        ist_dt = dt.astimezone(ist)
+        # Convert to IST (UTC+5:30) by adding 5.5 hours
+        ist_dt = dt + timedelta(hours=5, minutes=30)
+        # Format as DD/MM/YYYY HH:MM:SS
         return ist_dt.strftime('%d/%m/%Y %H:%M:%S')
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error converting time {utc_str}: {e}")
         return utc_str
 
 
