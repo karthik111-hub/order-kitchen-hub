@@ -66,6 +66,46 @@ def make_order_id() -> str:
     return f"{now:%d-%m-%Y-%H:%M:%S}-{uuid.uuid4().hex[:8].upper()}"
 
 
+def utc_to_ist_simple(utc_str: str) -> str:
+    """Parse UTC ISO string and convert to IST by simple string manipulation"""
+    if not utc_str:
+        return ""
+    try:
+        # Format: 2026-08-18T08:45:24.007552+00:00
+        # Extract date and time parts
+        if 'T' in utc_str:
+            date_part, time_part = utc_str.split('T')
+            year, month, day = date_part.split('-')
+            time_only = time_part.split('.')[0]  # Remove milliseconds
+            
+            # Parse hours, minutes, seconds
+            hours, mins, secs = map(int, time_only.split(':'))
+            
+            # Convert UTC to IST (add 5:30)
+            mins += 30
+            if mins >= 60:
+                mins -= 60
+                hours += 1
+            hours += 5
+            
+            # Handle day overflow
+            if hours >= 24:
+                hours -= 24
+                day = str(int(day) + 1)
+                # Simple month/year handling
+                if day == '32':
+                    day = '01'
+                    month = str(int(month) + 1)
+                    if month == '13':
+                        month = '01'
+                        year = str(int(year) + 1)
+            
+            return f"{day}/{month}/{year} {hours:02d}:{mins:02d}:{secs:02d}"
+        return utc_str
+    except Exception as e:
+        return utc_str
+
+
 # ---------- Models ----------
 class Category(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -123,7 +163,7 @@ class OrderItem(BaseModel):
 class Order(BaseModel):
     id: str = Field(default_factory=make_order_id)
     token_number: int = 0
-    order_number: str = ""
+    order_number: str = ""  # DDMMYYYY+token format
     items: List[OrderItem]
     total: float
     status: Literal["pending", "preparing", "completed", "cancelled"] = "pending"
@@ -249,6 +289,7 @@ async def list_menu(category: Optional[str] = None, admin: bool = False):
     query = {}
     if category:
         query["category"] = category
+    # Only filter by is_available if admin=False (for master/normal users)
     if not admin:
         query["is_available"] = True
     items = await db.menu_items.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
@@ -421,7 +462,7 @@ async def rzp_create_intent(payload: OrderCreate):
         "items": [i.dict() for i in payload.items],
         "table_number": payload.table_number,
         "notes": payload.notes,
-        "status": "pending",
+        "status": "pending",  # pending | completed | failed
         "created_order_id": None,
         "created_at": now_iso(),
     }
@@ -459,6 +500,7 @@ async def rzp_finalize(intent_id: str, payload: FinalizePayload):
     if not settings:
         raise HTTPException(status_code=503, detail="Payment not configured")
 
+    # Verify signature
     msg = f"{intent['razorpay_order_id']}|{payload.razorpay_payment_id}".encode()
     expected = hmac.new(
         settings["key_secret"].encode(), msg, hashlib.sha256
@@ -470,6 +512,7 @@ async def rzp_finalize(intent_id: str, payload: FinalizePayload):
         )
         raise HTTPException(status_code=400, detail="Invalid payment signature")
 
+    # Create the order marked as paid
     total = sum(i["price"] * i["quantity"] for i in intent["items"])
     token_number = await get_next_token_number()
     now = datetime.now(timezone.utc)
@@ -614,6 +657,7 @@ async def rzp_checkout_page(intent_id: str):
       rzp.open();
     }}
     document.getElementById('pay').addEventListener('click', pay);
+    // Auto-open on load for a smoother experience
     setTimeout(pay, 300);
   </script>
 </body>
@@ -644,6 +688,7 @@ async def daily_report(
         else:
             end_date = start_date
         
+        # If end_date is before start_date, swap them
         if end_date < start_date:
             start_date, end_date = end_date, start_date
         
@@ -678,40 +723,15 @@ async def daily_report(
 
         for o in orders:
             items_summary = ", ".join(
-                f"{i['quantity']}x {i['name']}" for i in o.get("items", [])
+                f"{i['quantity']}× {i['name']}" for i in o.get("items", [])
             )
             item_count = sum(i.get("quantity", 0) for i in o.get("items", []))
             pay_id = (o.get("payment") or {}).get("razorpay_payment_id", "")
             
-            # INLINE UTC to IST conversion
-            utc_str = o.get("created_at", "")
-            ist_time = utc_str
-            if utc_str and "T" in utc_str:
-                try:
-                    dt_parts = utc_str.split("T")
-                    date_str = dt_parts[0]
-                    time_str = dt_parts[1].split(".")[0]
-                    y, m, d = date_str.split("-")
-                    h, mi, s = time_str.split(":")
-                    h = int(h)
-                    mi = int(mi)
-                    s = int(s)
-                    mi += 30
-                    if mi >= 60:
-                        mi -= 60
-                        h += 1
-                    h += 5
-                    if h >= 24:
-                        h -= 24
-                        d = str(int(d) + 1)
-                    ist_time = f"{d}/{m}/{y} {h:02d}:{mi:02d}:{s:02d}"
-                except:
-                    ist_time = utc_str
-            
             ws.append([
                 o.get("token_number", ""),
                 o.get("id", ""),
-                ist_time,
+                utc_to_ist_simple(o.get("created_at", "")),
                 o.get("table_number", "") or "",
                 items_summary,
                 item_count,
@@ -725,6 +745,7 @@ async def daily_report(
             if o.get("payment_status") == "paid":
                 total_revenue_paid += float(o.get("total", 0))
 
+        # Summary section
         ws.append([])
         date_range = f"{start_date.isoformat()} to {end_date.isoformat()}" if from_date or to_date else start_date.isoformat()
         ws.append(["Summary", date_range])
@@ -733,6 +754,7 @@ async def daily_report(
         ws.append(["Paid revenue (₹)", round(total_revenue_paid, 2)])
         ws.append(["Unpaid revenue (₹)", round(total_revenue_all - total_revenue_paid, 2)])
 
+        # Column widths
         widths = [10, 30, 26, 8, 60, 12, 12, 16, 14, 26, 30]
         for i, w in enumerate(widths, start=1):
             ws.column_dimensions[chr(64 + i)].width = w
@@ -753,6 +775,7 @@ async def daily_report(
         logger.error(f"Error generating report: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}") 
 
+# Draft Orders
 @api_router.post("/drafts", response_model=Order)
 async def save_draft(payload: OrderCreate):
     try:
