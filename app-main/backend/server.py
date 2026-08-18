@@ -177,6 +177,18 @@ def _rzp_client(settings: dict) -> razorpay.Client:
     return razorpay.Client(auth=(settings["key_id"], settings["key_secret"]))
 
 
+
+def convert_utc_to_ist(utc_str: str) -> str:
+    try:
+        from zoneinfo import ZoneInfo
+        dt = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
+        ist = ZoneInfo('Asia/Kolkata')
+        ist_dt = dt.astimezone(ist)
+        return ist_dt.strftime('%d/%m/%Y %H:%M:%S')
+    except Exception:
+        return utc_str
+
+
 # ---------- Routes ----------
 @api_router.get("/")
 async def root():
@@ -665,7 +677,7 @@ async def daily_report(
         ws.title = "Orders"
 
         headers = [
-            "Token #", "Order ID", "Time (UTC)", "Table", "Items", "Item Count",
+            "Token #", "Order ID", "Time (IST)", "Table", "Items", "Item Count",
             "Total (₹)", "Payment Status", "Order Status", "Payment ID", "Notes",
         ]
         ws.append(headers)
@@ -690,7 +702,7 @@ async def daily_report(
             ws.append([
                 o.get("token_number", ""),
                 o.get("id", ""),
-                o.get("created_at", ""),
+                convert_utc_to_ist(o.get("created_at", "")),
                 o.get("table_number", "") or "",
                 items_summary,
                 item_count,
@@ -813,3 +825,5 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+
