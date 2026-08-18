@@ -21,6 +21,25 @@ const ROW_HEIGHT = 40;
 
 const shortId = (id: string) => id.split('-').pop() || id.slice(0, 8);
 
+const formatTimeIST = (utcTime: string) => {
+  try {
+    const date = new Date(utcTime);
+    const formatter = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    });
+    return formatter.format(date);
+  } catch (e) {
+    return '';
+  }
+};
+
 type Matrix = {
   orders: Order[];
   itemNames: string[];
@@ -246,6 +265,7 @@ export default function ChefPreparing() {
                       <Text style={styles.orderId}>#{order.token_number}</Text>
                       <Text style={styles.orderNumber}>{shortId(order.id)}</Text>
                     </View>
+                    <Text style={styles.timestamp}>{formatTimeIST(order.created_at)}</Text>
                     {order.table_number && (
                       <Text style={styles.tableNumber}>Table {order.table_number}</Text>
                     )}
@@ -438,6 +458,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: radius.sm,
   },
+  timestamp: {
+    fontSize: type.xs,
+    fontWeight: '600',
+    color: colors.brand,
+    marginTop: 4,
+  },
   tableNumber: {
     fontSize: type.sm,
     color: colors.muted,
@@ -507,3 +533,4 @@ const styles = StyleSheet.create({
   },
   flex1: { flex: 1 },
 });
+
