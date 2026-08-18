@@ -24,13 +24,17 @@ const shortId = (id: string) => id.split('-').pop() || id.slice(0, 8);
 const formatTimeIST = (utcTime: string) => {
   try {
     const date = new Date(utcTime);
-    const istTime = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
-    return istTime.toLocaleString('en-IN', {
+    const formatter = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: true,
     });
+    return formatter.format(date);
   } catch (e) {
     return '';
   }
