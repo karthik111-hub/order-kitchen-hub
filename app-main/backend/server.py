@@ -178,19 +178,6 @@ def _rzp_client(settings: dict) -> razorpay.Client:
 
 
 
-def convert_utc_to_ist(utc_str: str) -> str:
-    try:
-        # Parse UTC datetime
-        dt = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
-        # Convert to IST (UTC+5:30) by adding 5.5 hours
-        ist_dt = dt + timedelta(hours=5, minutes=30)
-        # Format as DD/MM/YYYY HH:MM:SS
-        return ist_dt.strftime('%d/%m/%Y %H:%M:%S')
-    except Exception as e:
-        logger.error(f"Error converting time {utc_str}: {e}")
-        return utc_str
-
-
 # ---------- Routes ----------
 @api_router.get("/")
 async def root():
@@ -701,10 +688,20 @@ async def daily_report(
             )
             item_count = sum(i.get("quantity", 0) for i in o.get("items", []))
             pay_id = (o.get("payment") or {}).get("razorpay_payment_id", "")
+            
+            # Convert UTC to IST inline
+            utc_str = o.get("created_at", "")
+            try:
+                utc_dt = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
+                ist_dt = utc_dt + timedelta(hours=5, minutes=30)
+                ist_time = ist_dt.strftime('%d/%m/%Y %H:%M:%S')
+            except Exception:
+                ist_time = utc_str
+            
             ws.append([
                 o.get("token_number", ""),
                 o.get("id", ""),
-                convert_utc_to_ist(o.get("created_at", "")),
+                ist_time,
                 o.get("table_number", "") or "",
                 items_summary,
                 item_count,
@@ -827,5 +824,6 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
 
 
