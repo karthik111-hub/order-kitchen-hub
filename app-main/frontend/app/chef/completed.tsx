@@ -21,6 +21,21 @@ const ROW_HEIGHT = 40;
 
 const shortId = (id: string) => id.split('-').pop() || id.slice(0, 8);
 
+const formatTimeIST = (utcTime: string) => {
+  try {
+    const date = new Date(utcTime);
+    const istTime = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+    return istTime.toLocaleString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    });
+  } catch (e) {
+    return '';
+  }
+};
+
 type Matrix = {
   orders: Order[];
   itemNames: string[];
@@ -237,6 +252,7 @@ export default function ChefCompleted() {
                       <Text style={styles.orderId}>#{order.token_number}</Text>
                       <Text style={styles.orderNumber}>{shortId(order.id)}</Text>
                     </View>
+                    <Text style={styles.timestamp}>{formatTimeIST(order.created_at)}</Text>
                     {order.table_number && (
                       <Text style={styles.tableNumber}>Table {order.table_number}</Text>
                     )}
@@ -426,6 +442,12 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: radius.sm,
+  },
+  timestamp: {
+    fontSize: type.xs,
+    fontWeight: '600',
+    color: colors.success,
+    marginTop: 4,
   },
   tableNumber: {
     fontSize: type.sm,
