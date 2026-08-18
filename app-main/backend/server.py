@@ -66,17 +66,43 @@ def make_order_id() -> str:
     return f"{now:%d-%m-%Y-%H:%M:%S}-{uuid.uuid4().hex[:8].upper()}"
 
 
-def utc_to_ist(utc_str: str) -> str:
-    """Convert UTC ISO string to IST format DD/MM/YYYY HH:MM:SS"""
+def utc_to_ist_simple(utc_str: str) -> str:
+    """Parse UTC ISO string and convert to IST by simple string manipulation"""
     if not utc_str:
         return ""
     try:
-        # Parse ISO format (handles both Z suffix and +00:00)
-        dt = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
-        # Convert to IST by adding 5 hours 30 minutes
-        ist_dt = dt + timedelta(hours=5, minutes=30)
-        return ist_dt.strftime('%d/%m/%Y %H:%M:%S')
-    except Exception:
+        # Format: 2026-08-18T08:45:24.007552+00:00
+        # Extract date and time parts
+        if 'T' in utc_str:
+            date_part, time_part = utc_str.split('T')
+            year, month, day = date_part.split('-')
+            time_only = time_part.split('.')[0]  # Remove milliseconds
+            
+            # Parse hours, minutes, seconds
+            hours, mins, secs = map(int, time_only.split(':'))
+            
+            # Convert UTC to IST (add 5:30)
+            mins += 30
+            if mins >= 60:
+                mins -= 60
+                hours += 1
+            hours += 5
+            
+            # Handle day overflow
+            if hours >= 24:
+                hours -= 24
+                day = str(int(day) + 1)
+                # Simple month/year handling
+                if day == '32':
+                    day = '01'
+                    month = str(int(month) + 1)
+                    if month == '13':
+                        month = '01'
+                        year = str(int(year) + 1)
+            
+            return f"{day}/{month}/{year} {hours:02d}:{mins:02d}:{secs:02d}"
+        return utc_str
+    except Exception as e:
         return utc_str
 
 
@@ -705,7 +731,7 @@ async def daily_report(
             ws.append([
                 o.get("token_number", ""),
                 o.get("id", ""),
-                utc_to_ist(o.get("created_at", "")),
+                utc_to_ist_simple(o.get("created_at", "")),
                 o.get("table_number", "") or "",
                 items_summary,
                 item_count,
@@ -828,5 +854,3 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-#   F o r c e   r e b u i l d   v 2  
- 
