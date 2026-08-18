@@ -66,6 +66,20 @@ def make_order_id() -> str:
     return f"{now:%d-%m-%Y-%H:%M:%S}-{uuid.uuid4().hex[:8].upper()}"
 
 
+def utc_to_ist(utc_str: str) -> str:
+    """Convert UTC ISO string to IST format DD/MM/YYYY HH:MM:SS"""
+    if not utc_str:
+        return ""
+    try:
+        # Parse ISO format (handles both Z suffix and +00:00)
+        dt = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
+        # Convert to IST by adding 5 hours 30 minutes
+        ist_dt = dt + timedelta(hours=5, minutes=30)
+        return ist_dt.strftime('%d/%m/%Y %H:%M:%S')
+    except Exception:
+        return utc_str
+
+
 # ---------- Models ----------
 class Category(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -175,7 +189,6 @@ async def _get_rzp_settings() -> Optional[dict]:
 
 def _rzp_client(settings: dict) -> razorpay.Client:
     return razorpay.Client(auth=(settings["key_id"], settings["key_secret"]))
-
 
 
 # ---------- Routes ----------
@@ -689,19 +702,10 @@ async def daily_report(
             item_count = sum(i.get("quantity", 0) for i in o.get("items", []))
             pay_id = (o.get("payment") or {}).get("razorpay_payment_id", "")
             
-            # Convert UTC to IST inline
-            utc_str = o.get("created_at", "")
-            try:
-                utc_dt = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
-                ist_dt = utc_dt + timedelta(hours=5, minutes=30)
-                ist_time = ist_dt.strftime('%d/%m/%Y %H:%M:%S')
-            except Exception:
-                ist_time = utc_str
-            
             ws.append([
                 o.get("token_number", ""),
                 o.get("id", ""),
-                ist_time,
+                utc_to_ist(o.get("created_at", "")),
                 o.get("table_number", "") or "",
                 items_summary,
                 item_count,
@@ -824,6 +828,3 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-
-
-
