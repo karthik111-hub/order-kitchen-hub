@@ -259,19 +259,18 @@ async def list_menu(category: Optional[str] = None, admin: bool = False):
     return [MenuItem(**it) for it in items]
 
 
-@api_router.post("/menu", response_model=MenuItem)
+@api_router.post("/menu")
 async def create_menu_item(payload: MenuItemCreate):
     if not payload.category.strip():
         raise HTTPException(status_code=400, detail="Category required")
-    # Explicitly preserve all fields including old_price
     payload_dict = payload.dict()
     item = MenuItem(**payload_dict)
     insert_dict = item.dict()
-    print(f"DEBUG: insert_dict = {insert_dict}", flush=True)
+    print(f"DEBUG: insert_dict with old_price = {insert_dict}", flush=True)
     await db.menu_items.insert_one(insert_dict)
-    return item
-
-
+    result_dict = item.dict(exclude_none=False)
+    print(f"DEBUG: response dict with old_price = {result_dict}", flush=True)
+    return result_dict
 @api_router.patch("/menu/{item_id}", response_model=MenuItem)
 async def update_menu_item(item_id: str, payload: MenuItemUpdate):
     update_dict = {
