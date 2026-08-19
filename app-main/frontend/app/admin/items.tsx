@@ -88,7 +88,7 @@ export default function AdminItems() {
     setEditingItem(item);
     setName(item.name);
     setPrice(item.price.toString());
-    setOldPrice(item.old_price?.toString() || '');
+    setOldPrice(item.old_price?.toString());
     setImageBase64(item.image_base64 || null);
     setTag(item.tag || null);
     setIsAvailable(item.is_available);
