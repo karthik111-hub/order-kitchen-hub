@@ -194,6 +194,7 @@ export default function AdminItems() {
       await api.updateMenuItem(item.id, {
         name: item.name,
         price: item.price,
+        old_price: item.old_price,
         tag: item.tag,
         image_base64: item.image_base64,
         is_available: !item.is_available,
