@@ -721,6 +721,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   rowPrice: { fontSize: type.lg, fontWeight: '800', color: colors.onSurface },
+  rowOldPrice: { 
+    fontSize: type.sm, 
+    color: colors.muted, 
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
