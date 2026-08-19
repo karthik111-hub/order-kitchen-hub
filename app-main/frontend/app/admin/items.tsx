@@ -38,6 +38,7 @@ export default function AdminItems() {
   // form state
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
+  const [oldPrice, setOldPrice] = useState('');
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [tag, setTag] = useState<ItemTag | null>(null);
   const [isAvailable, setIsAvailable] = useState(true);
@@ -75,6 +76,7 @@ export default function AdminItems() {
     setEditingItem(null);
     setName('');
     setPrice('');
+    setOldPrice('');
     setImageBase64(null);
     setTag(null);
     setIsAvailable(true);
@@ -86,6 +88,7 @@ export default function AdminItems() {
     setEditingItem(item);
     setName(item.name);
     setPrice(item.price.toString());
+    setOldPrice(item.old_price?.toString() || '');
     setImageBase64(item.image_base64 || null);
     setTag(item.tag || null);
     setIsAvailable(item.is_available);
@@ -126,12 +129,14 @@ export default function AdminItems() {
     }
     try {
       setSaving(true);
+      const oldPriceNum = oldPrice ? parseFloat(oldPrice) : undefined;
       
       if (editingItem) {
         console.log('[DEBUG] Updating item:', editingItem.id);
         await api.updateMenuItem(editingItem.id, {
           name: name.trim(),
           price: priceNum,
+          old_price: oldPriceNum,
           tag,
           image_base64: imageBase64,
           is_available: isAvailable,
@@ -142,6 +147,7 @@ export default function AdminItems() {
         await api.createMenuItem({
           name: name.trim(),
           price: priceNum,
+          old_price: oldPriceNum,
           category: selectedCat,
           tag,
           image_base64: imageBase64,
@@ -403,6 +409,15 @@ export default function AdminItems() {
               placeholderTextColor={colors.muted}
               value={price}
               onChangeText={setPrice}
+              keyboardType="decimal-pad"
+              style={styles.input}
+            />
+            <TextInput
+              testID="admin-item-old-price-input"
+              placeholder="Old price (optional)"
+              placeholderTextColor={colors.muted}
+              value={oldPrice}
+              onChangeText={setOldPrice}
               keyboardType="decimal-pad"
               style={styles.input}
             />
