@@ -264,14 +264,9 @@ async def list_menu(category: Optional[str] = None, admin: bool = False):
 async def create_menu_item(payload: MenuItemCreate):
     if not payload.category.strip():
         raise HTTPException(status_code=400, detail="Category required")
-    payload_dict = payload.dict()
-    item = MenuItem(**payload_dict)
-    insert_dict = item.dict()
-    print(f"DEBUG: insert_dict with old_price = {insert_dict}", flush=True)
-    await db.menu_items.insert_one(insert_dict)
-    result_dict = item.dict(exclude_none=False)
-    print(f"DEBUG: response dict with old_price = {result_dict}", flush=True)
-    return result_dict
+    item = MenuItem(**payload.dict())
+    await db.menu_items.insert_one(item.dict())
+    return item
 @api_router.patch("/menu/{item_id}", response_model=MenuItem)
 async def update_menu_item(item_id: str, payload: MenuItemUpdate):
     update_dict = {
