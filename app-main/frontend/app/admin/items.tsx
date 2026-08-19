@@ -129,7 +129,7 @@ export default function AdminItems() {
     }
     try {
       setSaving(true);
-      const oldPriceNum = oldPrice ? parseFloat(oldPrice) : undefined;
+      const oldPriceNum = oldPrice && oldPrice.trim() ? parseFloat(oldPrice) : null;
       
       if (editingItem) {
         console.log('[DEBUG] Updating item:', editingItem.id);
@@ -415,7 +415,7 @@ export default function AdminItems() {
             />
             <TextInput
               testID="admin-item-old-price-input"
-              placeholder="Old price (optional)"
+              placeholder="Old price"
               placeholderTextColor={colors.muted}
               value={oldPrice}
               onChangeText={setOldPrice}
