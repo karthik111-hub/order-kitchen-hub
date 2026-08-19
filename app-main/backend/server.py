@@ -88,6 +88,7 @@ class MenuItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     price: float
+    old_price: Optional[float] = None
     category: str
     tag: Optional[ItemTag] = None
     image_base64: Optional[str] = None
@@ -98,6 +99,7 @@ class MenuItem(BaseModel):
 class MenuItemCreate(BaseModel):
     name: str
     price: float
+    old_price: Optional[float] = None
     category: str
     tag: Optional[ItemTag] = None
     image_base64: Optional[str] = None
@@ -107,6 +109,7 @@ class MenuItemCreate(BaseModel):
 class MenuItemUpdate(BaseModel):
     name: str
     price: float
+    old_price: Optional[float] = None
     tag: Optional[ItemTag] = None
     image_base64: Optional[str] = None
     is_available: Optional[bool] = None
@@ -270,6 +273,7 @@ async def update_menu_item(item_id: str, payload: MenuItemUpdate):
     update_dict = {
         "name": payload.name.strip(),
         "price": payload.price,
+        "old_price": payload.old_price,
         "tag": payload.tag,
         "image_base64": payload.image_base64,
     }
