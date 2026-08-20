@@ -127,9 +127,10 @@ export default function AdminItems() {
       Alert.alert('Invalid price', 'Enter a valid price.');
       return;
     }
-    const oldPriceNum = parseFloat(oldPrice);
-    if (isNaN(oldPriceNum) || oldPriceNum < 0) {
-      Alert.alert('Invalid old price', 'Enter a valid old price.');
+    // old_price is optional - only validate if provided
+    const oldPriceNum = oldPrice && oldPrice.trim() ? parseFloat(oldPrice) : null;
+    if (oldPriceNum !== null && (isNaN(oldPriceNum) || oldPriceNum < 0)) {
+      Alert.alert('Invalid old price', 'Enter a valid old price if provided.');
       return;
     }
     try {
@@ -425,7 +426,7 @@ export default function AdminItems() {
             />
             <TextInput
               testID="admin-item-old-price-input"
-              placeholder="Old price"
+              placeholder="Old price (optional)"
               placeholderTextColor={colors.muted}
               value={oldPrice}
               onChangeText={setOldPrice}
