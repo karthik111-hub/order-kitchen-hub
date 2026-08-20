@@ -271,13 +271,15 @@ async def create_menu_item(payload: MenuItemCreate):
     if not payload.category.strip():
         raise HTTPException(status_code=400, detail="Category required")
     
+    logger.info(f"[CREATE_ITEM] Received payload: name={payload.name}, price={payload.price}, old_price={payload.old_price}")
+    
     # Build dict manually WITHOUT Pydantic's exclude_none filtering
     item_id = str(uuid.uuid4())
     item_dict = {
         "id": item_id,
         "name": payload.name,
         "price": payload.price,
-        "old_price": payload.old_price,  # Include even if None - Motor/PyMongo will handle it
+        "old_price": payload.old_price,  # Include - should always be a float now
         "category": payload.category,
         "tag": payload.tag,
         "image_base64": payload.image_base64,
@@ -285,7 +287,9 @@ async def create_menu_item(payload: MenuItemCreate):
         "created_at": now_iso(),
     }
     
+    logger.info(f"[CREATE_ITEM] Inserting dict with old_price={item_dict['old_price']}")
     await db.menu_items.insert_one(item_dict)
+    logger.info(f"[CREATE_ITEM] Successfully inserted item {item_id}")
     return MenuItem(**item_dict)
 
 
