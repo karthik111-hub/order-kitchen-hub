@@ -272,23 +272,13 @@ async def create_menu_item(payload: MenuItemCreate):
         raise HTTPException(status_code=400, detail="Category required")
     
     item = MenuItem(**payload.dict())
-    # FORCE include old_price by manually building dict
-    item_dict = {
-        "id": item.id,
-        "name": item.name,
-        "price": item.price,
-        "old_price": item.old_price,
-        "category": item.category,
-        "tag": item.tag,
-        "image_base64": item.image_base64,
-        "is_available": item.is_available,
-        "created_at": item.created_at,
-    }
+    # Convert to dict and ensure old_price is included even if None
+    item_dict = item.dict()
+    # Explicitly set old_price in the dict (MongoDB will store null)
+    item_dict["old_price"] = item.old_price
     
     await db.menu_items.insert_one(item_dict)
     return item
-
-
 @api_router.patch("/menu/{item_id}", response_model=MenuItem)
 async def update_menu_item(item_id: str, payload: MenuItemUpdate):
     update_dict = {
@@ -832,5 +822,6 @@ app.include_router(api_router)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-#   R e b u i l d   t r i g g e r  
+#   R e b u i l d   t r i g g e r 
+ 
  
