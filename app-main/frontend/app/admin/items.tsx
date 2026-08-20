@@ -88,7 +88,7 @@ export default function AdminItems() {
     setEditingItem(item);
     setName(item.name);
     setPrice(item.price.toString());
-    setOldPrice(item.old_price?.toString());
+    setOldPrice(item.old_price.toString());
     setImageBase64(item.image_base64 || null);
     setTag(item.tag || null);
     setIsAvailable(item.is_available);
@@ -129,7 +129,7 @@ export default function AdminItems() {
     }
     try {
       setSaving(true);
-      const oldPriceNum = oldPrice && oldPrice.trim() ? parseFloat(oldPrice) : null;
+      
       
       if (editingItem) {
         console.log('[DEBUG] Updating item:', editingItem.id);
