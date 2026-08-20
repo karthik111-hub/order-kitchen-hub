@@ -832,3 +832,5 @@ app.include_router(api_router)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+#   R e b u i l d   t r i g g e r  
+ 
