@@ -312,7 +312,12 @@ export default function AdminItems() {
                         </View>
                       )}
                     </View>
-                    <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
+                    <View style={styles.priceRow}>
+                      <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
+                      {item.old_price > item.price && (
+                        <Text style={styles.oldPrice}>₹{item.old_price.toFixed(0)}</Text>
+                      )}
+                    </View>
                   </View>
                   <Pressable
                     testID={`admin-item-toggle-${item.id}`}
@@ -556,7 +561,14 @@ const styles = StyleSheet.create({
   itemImg: { width: thumb.sm, height: thumb.sm, borderRadius: radius.sm },
   itemTopRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
   itemName: { fontSize: type.base, fontWeight: '700', color: colors.onSurface },
-  itemPrice: { fontSize: type.sm, color: colors.muted, marginTop: 2 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
+  itemPrice: { fontSize: type.sm, color: colors.muted },
+  oldPrice: {
+    fontSize: type.xs,
+    color: colors.muted,
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+  },
   tagPill: {
     flexDirection: 'row',
     alignItems: 'center',
