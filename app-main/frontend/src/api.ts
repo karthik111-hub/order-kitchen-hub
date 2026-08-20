@@ -14,7 +14,7 @@ export type MenuItem = {
   id: string;
   name: string;
   price: number;
-  old_price?: number | null;
+  old_price: number;
   category: string;
   tag?: ItemTag | null;
   image_base64?: string | null;
@@ -98,7 +98,7 @@ export const api = {
   createMenuItem: (body: {
     name: string;
     price: number;
-    old_price?: number | null;
+    old_price: number;
     category: string;
     tag?: ItemTag | null;
     image_base64?: string | null;
@@ -115,7 +115,7 @@ export const api = {
   updateMenuItem: (id: string, body: {
     name: string;
     price: number;
-    old_price?: number | null;
+    old_price: number;
     tag?: ItemTag | null;
     image_base64?: string | null;
     is_available?: boolean;
