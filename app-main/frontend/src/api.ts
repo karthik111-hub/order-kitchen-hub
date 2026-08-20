@@ -102,12 +102,16 @@ export const api = {
     category: string;
     tag?: ItemTag | null;
     image_base64?: string | null;
-  }) =>
-    fetch(`${API}/menu`, {
+  }) => {
+    const bodyStr = JSON.stringify(body);
+    console.log('[NETWORK] POST /menu body:', bodyStr);
+    console.log('[NETWORK] old_price field:', body.old_price, 'type:', typeof body.old_price);
+    return fetch(`${API}/menu`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }).then(r => handle<MenuItem>(r)),
+      body: bodyStr,
+    }).then(r => handle<MenuItem>(r));
+  },
   updateMenuItem: (id: string, body: {
     name: string;
     price: number;
