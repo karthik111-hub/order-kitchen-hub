@@ -38,6 +38,7 @@ export default function AdminItems() {
   // form state
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
+  const [oldPrice, setOldPrice] = useState('');
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [tag, setTag] = useState<ItemTag | null>(null);
   const [isAvailable, setIsAvailable] = useState(true);
@@ -75,6 +76,7 @@ export default function AdminItems() {
     setEditingItem(null);
     setName('');
     setPrice('');
+    setOldPrice('');
     setImageBase64(null);
     setTag(null);
     setIsAvailable(true);
@@ -85,7 +87,8 @@ export default function AdminItems() {
     console.log('[DEBUG] Edit button clicked for item:', item.id, item.name);
     setEditingItem(item);
     setName(item.name);
-    setPrice(item.price.toString());
+    setPrice(item.price);
+    setOldPrice(item.old_price);
     setImageBase64(item.image_base64 || null);
     setTag(item.tag || null);
     setIsAvailable(item.is_available);
@@ -124,14 +127,21 @@ export default function AdminItems() {
       Alert.alert('Invalid price', 'Enter a valid price.');
       return;
     }
+    const oldPriceNum = parseFloat(oldPrice);
+    if (isNaN(oldPriceNum) || oldPriceNum < 0) {
+      Alert.alert('Invalid old price', 'Enter a valid old price.');
+      return;
+    }
     try {
       setSaving(true);
+      
       
       if (editingItem) {
         console.log('[DEBUG] Updating item:', editingItem.id);
         await api.updateMenuItem(editingItem.id, {
           name: name.trim(),
           price: priceNum,
+          old_price: oldPriceNum,
           tag,
           image_base64: imageBase64,
           is_available: isAvailable,
@@ -142,6 +152,7 @@ export default function AdminItems() {
         await api.createMenuItem({
           name: name.trim(),
           price: priceNum,
+          old_price: oldPriceNum,
           category: selectedCat,
           tag,
           image_base64: imageBase64,
@@ -188,6 +199,7 @@ export default function AdminItems() {
       await api.updateMenuItem(item.id, {
         name: item.name,
         price: item.price,
+        old_price: item.old_price,
         tag: item.tag,
         image_base64: item.image_base64,
         is_available: !item.is_available,
@@ -300,7 +312,12 @@ export default function AdminItems() {
                         </View>
                       )}
                     </View>
-                    <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
+                    <View style={styles.priceRow}>
+                      <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
+                      {item.old_price > item.price && (
+                        <Text style={styles.oldPrice}>₹{item.old_price.toFixed(0)}</Text>
+                      )}
+                    </View>
                   </View>
                   <Pressable
                     testID={`admin-item-toggle-${item.id}`}
@@ -403,6 +420,15 @@ export default function AdminItems() {
               placeholderTextColor={colors.muted}
               value={price}
               onChangeText={setPrice}
+              keyboardType="decimal-pad"
+              style={styles.input}
+            />
+            <TextInput
+              testID="admin-item-old-price-input"
+              placeholder="Old price"
+              placeholderTextColor={colors.muted}
+              value={oldPrice}
+              onChangeText={setOldPrice}
               keyboardType="decimal-pad"
               style={styles.input}
             />
@@ -535,7 +561,14 @@ const styles = StyleSheet.create({
   itemImg: { width: thumb.sm, height: thumb.sm, borderRadius: radius.sm },
   itemTopRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
   itemName: { fontSize: type.base, fontWeight: '700', color: colors.onSurface },
-  itemPrice: { fontSize: type.sm, color: colors.muted, marginTop: 2 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
+  itemPrice: { fontSize: type.sm, color: colors.muted },
+  oldPrice: {
+    fontSize: type.xs,
+    color: colors.muted,
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+  },
   tagPill: {
     flexDirection: 'row',
     alignItems: 'center',
