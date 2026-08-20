@@ -280,8 +280,8 @@ async def create_menu_item(payload: MenuItemCreate):
     item = MenuItem(**payload_dict)
     logger.info(f"MenuItem created: {item}")
     
-    item_dict = item.dict()
-    logger.info(f"item.dict() result: {item_dict}")
+    item_dict = item.dict(exclude_none=False)
+    logger.info(f"item.dict(exclude_none=False) result: {item_dict}")
     logger.info(f"item_dict['old_price']: {item_dict.get('old_price')}")
     
     result = await db.menu_items.insert_one(item_dict)
