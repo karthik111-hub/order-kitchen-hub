@@ -18,6 +18,12 @@ import razorpay
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
+# SET UP LOGGING FIRST - before routes reference logger
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -262,33 +268,16 @@ async def list_menu(category: Optional[str] = None, admin: bool = False):
 
 @api_router.post("/menu")
 async def create_menu_item(payload: MenuItemCreate):
-    logger.info("=== CREATE_MENU_ITEM START ===")
-    logger.info(f"Full payload: {payload}")
-    logger.info(f"payload.name: {payload.name}")
-    logger.info(f"payload.price: {payload.price}")
-    logger.info(f"payload.old_price: {payload.old_price} (type: {type(payload.old_price)})")
-    logger.info(f"payload.category: {payload.category}")
-    
-    payload_dict = payload.dict()
-    logger.info(f"payload.dict() result: {payload_dict}")
-    logger.info(f"'old_price' key exists in dict: {'old_price' in payload_dict}")
-    logger.info(f"payload_dict['old_price']: {payload_dict.get('old_price')}")
-    
     if not payload.category.strip():
         raise HTTPException(status_code=400, detail="Category required")
     
-    item = MenuItem(**payload_dict)
-    logger.info(f"MenuItem created: {item}")
-    
+    item = MenuItem(**payload.dict())
     item_dict = item.dict(exclude_none=False)
-    logger.info(f"item.dict(exclude_none=False) result: {item_dict}")
-    logger.info(f"item_dict['old_price']: {item_dict.get('old_price')}")
     
-    result = await db.menu_items.insert_one(item_dict)
-    logger.info(f"Inserted to MongoDB with id: {result.inserted_id}")
-    logger.info("=== CREATE_MENU_ITEM END ===")
-    
+    await db.menu_items.insert_one(item_dict)
     return item
+
+
 @api_router.patch("/menu/{item_id}", response_model=MenuItem)
 async def update_menu_item(item_id: str, payload: MenuItemUpdate):
     update_dict = {
@@ -827,12 +816,6 @@ async def delete_draft(draft_id: str):
         raise HTTPException(status_code=500, detail=f"Error deleting draft: {str(e)}")
         
 app.include_router(api_router)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 
 @app.on_event("shutdown")
