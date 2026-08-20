@@ -262,31 +262,31 @@ async def list_menu(category: Optional[str] = None, admin: bool = False):
 
 @api_router.post("/menu")
 async def create_menu_item(payload: MenuItemCreate):
-    print("\n=== CREATE_MENU_ITEM START ===", flush=True)
-    print(f"Full payload: {payload}", flush=True)
-    print(f"payload.name: {payload.name}", flush=True)
-    print(f"payload.price: {payload.price}", flush=True)
-    print(f"payload.old_price: {payload.old_price} (type: {type(payload.old_price)})", flush=True)
-    print(f"payload.category: {payload.category}", flush=True)
+    logger.info("=== CREATE_MENU_ITEM START ===")
+    logger.info(f"Full payload: {payload}")
+    logger.info(f"payload.name: {payload.name}")
+    logger.info(f"payload.price: {payload.price}")
+    logger.info(f"payload.old_price: {payload.old_price} (type: {type(payload.old_price)})")
+    logger.info(f"payload.category: {payload.category}")
     
     payload_dict = payload.dict()
-    print(f"\npayload.dict() result: {payload_dict}", flush=True)
-    print(f"'old_price' key exists in dict: {'old_price' in payload_dict}", flush=True)
-    print(f"payload_dict['old_price']: {payload_dict.get('old_price')}", flush=True)
+    logger.info(f"payload.dict() result: {payload_dict}")
+    logger.info(f"'old_price' key exists in dict: {'old_price' in payload_dict}")
+    logger.info(f"payload_dict['old_price']: {payload_dict.get('old_price')}")
     
     if not payload.category.strip():
         raise HTTPException(status_code=400, detail="Category required")
     
     item = MenuItem(**payload_dict)
-    print(f"\nMenuItem created: {item}", flush=True)
+    logger.info(f"MenuItem created: {item}")
     
     item_dict = item.dict()
-    print(f"item.dict() result: {item_dict}", flush=True)
-    print(f"item_dict['old_price']: {item_dict.get('old_price')}", flush=True)
+    logger.info(f"item.dict() result: {item_dict}")
+    logger.info(f"item_dict['old_price']: {item_dict.get('old_price')}")
     
     result = await db.menu_items.insert_one(item_dict)
-    print(f"Inserted to MongoDB with id: {result.inserted_id}", flush=True)
-    print("=== CREATE_MENU_ITEM END ===\n", flush=True)
+    logger.info(f"Inserted to MongoDB with id: {result.inserted_id}")
+    logger.info("=== CREATE_MENU_ITEM END ===")
     
     return item
 @api_router.patch("/menu/{item_id}", response_model=MenuItem)
