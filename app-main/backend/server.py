@@ -272,7 +272,18 @@ async def create_menu_item(payload: MenuItemCreate):
         raise HTTPException(status_code=400, detail="Category required")
     
     item = MenuItem(**payload.dict())
-    item_dict = item.dict(exclude_none=False)
+    # FORCE include old_price by manually building dict
+    item_dict = {
+        "id": item.id,
+        "name": item.name,
+        "price": item.price,
+        "old_price": item.old_price,
+        "category": item.category,
+        "tag": item.tag,
+        "image_base64": item.image_base64,
+        "is_available": item.is_available,
+        "created_at": item.created_at,
+    }
     
     await db.menu_items.insert_one(item_dict)
     return item
