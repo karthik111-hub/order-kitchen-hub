@@ -271,14 +271,24 @@ async def create_menu_item(payload: MenuItemCreate):
     if not payload.category.strip():
         raise HTTPException(status_code=400, detail="Category required")
     
-    item = MenuItem(**payload.dict())
-    # Convert to dict and ensure old_price is included even if None
-    item_dict = item.dict()
-    # Explicitly set old_price in the dict (MongoDB will store null)
-    item_dict["old_price"] = item.old_price
+    # Build dict manually WITHOUT Pydantic's exclude_none filtering
+    item_id = str(uuid.uuid4())
+    item_dict = {
+        "id": item_id,
+        "name": payload.name,
+        "price": payload.price,
+        "old_price": payload.old_price,  # Include even if None - Motor/PyMongo will handle it
+        "category": payload.category,
+        "tag": payload.tag,
+        "image_base64": payload.image_base64,
+        "is_available": payload.is_available,
+        "created_at": now_iso(),
+    }
     
     await db.menu_items.insert_one(item_dict)
-    return item
+    return MenuItem(**item_dict)
+
+
 @api_router.patch("/menu/{item_id}", response_model=MenuItem)
 async def update_menu_item(item_id: str, payload: MenuItemUpdate):
     update_dict = {
@@ -822,6 +832,3 @@ app.include_router(api_router)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-#   R e b u i l d   t r i g g e r 
- 
- 
