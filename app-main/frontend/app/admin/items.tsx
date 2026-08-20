@@ -127,6 +127,11 @@ export default function AdminItems() {
       Alert.alert('Invalid price', 'Enter a valid price.');
       return;
     }
+    const oldPriceNum = parseFloat(oldPrice);
+    if (isNaN(oldPriceNum) || oldPriceNum < 0) {
+      Alert.alert('Invalid old price', 'Enter a valid old price.');
+      return;
+    }
     try {
       setSaving(true);
       
