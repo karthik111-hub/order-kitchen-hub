@@ -46,16 +46,22 @@ export default function AdminItems() {
 
   const load = useCallback(async () => {
     try {
+      console.log('[ADMIN-ITEMS] Loading categories and items...');
       const [c, i] = await Promise.all([api.listCategories(), api.listMenu(undefined, true)]);
+      console.log('[ADMIN-ITEMS] Loaded categories:', c);
+      console.log('[ADMIN-ITEMS] Loaded items:', i);
       setCats(c);
       setItems(i);
-      if (!selectedCat && c.length > 0) setSelectedCat(c[0].name);
+      // Set initial category only on first load
+      setSelectedCat(prev => prev || (c.length > 0 ? c[0].name : null));
+      console.log('[ADMIN-ITEMS] Set', c.length, 'categories and', i.length, 'items');
     } catch (e) {
+      console.error('[ADMIN-ITEMS] Error loading:', e);
       console.warn(e);
     } finally {
       setLoading(false);
     }
-  }, [selectedCat]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,8 +93,8 @@ export default function AdminItems() {
     console.log('[DEBUG] Edit button clicked for item:', item.id, item.name);
     setEditingItem(item);
     setName(item.name);
-    setPrice(item.price);
-    setOldPrice(item.old_price);
+    setPrice(item.price.toString());
+    setOldPrice(item.old_price?.toString() || '');
     setImageBase64(item.image_base64 || null);
     setTag(item.tag || null);
     setIsAvailable(item.is_available);
@@ -127,9 +133,10 @@ export default function AdminItems() {
       Alert.alert('Invalid price', 'Enter a valid price.');
       return;
     }
-    const oldPriceNum = parseFloat(oldPrice);
-    if (isNaN(oldPriceNum) || oldPriceNum < 0) {
-      Alert.alert('Invalid old price', 'Enter a valid old price.');
+    // old_price is optional - only validate if provided
+    const oldPriceNum = oldPrice && oldPrice.trim() ? parseFloat(oldPrice) : null;
+    if (oldPriceNum !== null && (isNaN(oldPriceNum) || oldPriceNum < 0)) {
+      Alert.alert('Invalid old price', 'Enter a valid old price if provided.');
       return;
     }
     try {
@@ -314,7 +321,7 @@ export default function AdminItems() {
                     </View>
                     <View style={styles.priceRow}>
                       <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
-                      {item.old_price > item.price && (
+                      {item.old_price && item.old_price > item.price && (
                         <Text style={styles.oldPrice}>₹{item.old_price.toFixed(0)}</Text>
                       )}
                     </View>
@@ -425,7 +432,7 @@ export default function AdminItems() {
             />
             <TextInput
               testID="admin-item-old-price-input"
-              placeholder="Old price"
+              placeholder="Old price (optional)"
               placeholderTextColor={colors.muted}
               value={oldPrice}
               onChangeText={setOldPrice}
