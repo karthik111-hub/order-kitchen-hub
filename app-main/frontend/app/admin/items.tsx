@@ -49,13 +49,14 @@ export default function AdminItems() {
       const [c, i] = await Promise.all([api.listCategories(), api.listMenu(undefined, true)]);
       setCats(c);
       setItems(i);
-      if (!selectedCat && c.length > 0) setSelectedCat(c[0].name);
+      // Set initial category only on first load
+      setSelectedCat(prev => prev || (c.length > 0 ? c[0].name : null));
     } catch (e) {
       console.warn(e);
     } finally {
       setLoading(false);
     }
-  }, [selectedCat]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,8 +88,8 @@ export default function AdminItems() {
     console.log('[DEBUG] Edit button clicked for item:', item.id, item.name);
     setEditingItem(item);
     setName(item.name);
-    setPrice(item.price);
-    setOldPrice(item.old_price);
+    setPrice(item.price.toString());
+    setOldPrice(item.old_price?.toString() || '');
     setImageBase64(item.image_base64 || null);
     setTag(item.tag || null);
     setIsAvailable(item.is_available);
@@ -315,7 +316,7 @@ export default function AdminItems() {
                     </View>
                     <View style={styles.priceRow}>
                       <Text style={styles.itemPrice}>₹{item.price.toFixed(0)}</Text>
-                      {item.old_price > item.price && (
+                      {item.old_price && item.old_price > item.price && (
                         <Text style={styles.oldPrice}>₹{item.old_price.toFixed(0)}</Text>
                       )}
                     </View>
