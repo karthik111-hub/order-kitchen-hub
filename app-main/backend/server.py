@@ -35,10 +35,10 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Log environment at startup
+# Log environment at startup (never log secret values, only whether they're set)
 logger.info(f"Environment: RAILWAY_ENVIRONMENT={os.environ.get('RAILWAY_ENVIRONMENT', 'NOT_SET')}")
 logger.info(f"Loaded DB_NAME: {os.environ.get('DB_NAME', 'NOT_SET')}")
-logger.info(f"Loaded ADMIN_PASSWORD: {os.environ.get('ADMIN_PASSWORD', 'NOT_SET')}")
+logger.info(f"ADMIN_PASSWORD set: {bool(os.environ.get('ADMIN_PASSWORD'))}")
 
 ROLE_PASSWORDS = {
     "admin": os.environ.get("ADMIN_PASSWORD", ""),
@@ -53,7 +53,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
+    # The frontend never sends cookies/auth credentials, so allow_credentials
+    # is left off. Per the CORS spec, allow_credentials=True cannot be
+    # combined with a wildcard allow_origins in browsers anyway.
+    allow_credentials=False,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
