@@ -33,29 +33,41 @@ export default function RootLayout() {
         const segments = pathname.split("/").filter(Boolean);
         
         // Check if path includes krfoodcourt
-        if (segments[0] === 'krfoodcourt' && segments.length > 1) {
-          const currentSegment = segments[1]; // admin, master, or chef
-
-          // If trying to access protected routes
-          if (["admin", "master", "chef"].includes(currentSegment)) {
-            // Check if user has valid role for this route
-            if (!storedRole) {
-              // No authentication at all
-              console.log(`No auth found for segment: ${currentSegment}`);
-              router.replace("/");
-              return;
-            }
-            
-            if (storedRole !== currentSegment) {
-              // Logged in but with wrong role
-              console.log(`Role mismatch: trying to access /krfoodcourt/${currentSegment} but authenticated as ${storedRole}`);
-              router.replace("/");
-              return;
-            }
-            
-            // Valid role for this route - allow access
-            console.log(`Auth valid: ${storedRole} accessing /krfoodcourt/${storedRole}`);
+        if (segments[0] === 'krfoodcourt') {
+          if (segments.length === 1) {
+            // User is at /krfoodcourt (root of krfoodcourt) - this is the login page, allow it
+            setAuthChecked(true);
+            return;
           }
+          
+          if (segments.length > 1) {
+            const currentSegment = segments[1]; // admin, master, or chef
+
+            // If trying to access protected routes
+            if (["admin", "master", "chef"].includes(currentSegment)) {
+              // Check if user has valid role for this route
+              if (!storedRole) {
+                // No authentication at all
+                console.log(`No auth found for segment: ${currentSegment}`);
+                router.replace("/krfoodcourt");
+                return;
+              }
+              
+              if (storedRole !== currentSegment) {
+                // Logged in but with wrong role
+                console.log(`Role mismatch: trying to access /krfoodcourt/${currentSegment} but authenticated as ${storedRole}`);
+                router.replace("/krfoodcourt");
+                return;
+              }
+              
+              // Valid role for this route - allow access
+              console.log(`Auth valid: ${storedRole} accessing /krfoodcourt/${storedRole}`);
+            }
+          }
+        } else if (pathname === '/') {
+          // Root path - redirect to krfoodcourt
+          router.replace("/krfoodcourt");
+          return;
         }
       } catch (e) {
         console.error("Auth check error:", e);
