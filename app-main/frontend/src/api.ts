@@ -1,6 +1,11 @@
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8006';
 const API = `${BACKEND_URL}/api`;
 
+// Debug: log the URL being used
+console.log('[API-CONFIG] EXPO_PUBLIC_BACKEND_URL env:', process.env.EXPO_PUBLIC_BACKEND_URL);
+console.log('[API-CONFIG] Using BACKEND_URL:', BACKEND_URL);
+console.log('[API-CONFIG] Final API base:', API);
+
 export type Role = 'admin' | 'master' | 'chef';
 export type ItemTag = 'most_selling' | 'must_buy';
 
