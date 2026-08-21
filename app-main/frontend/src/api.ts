@@ -26,6 +26,7 @@ export type OrderItem = {
   menu_item_id: string;
   name: string;
   price: number;
+  old_price?: number | null;
   quantity: number;
   image_base64?: string | null;
 };

@@ -134,7 +134,7 @@ class OrderItem(BaseModel):
     menu_item_id: str
     name: str
     price: float
-    old_price: float
+    old_price: Optional[float] = None
     quantity: int
     image_base64: Optional[str] = None
 
