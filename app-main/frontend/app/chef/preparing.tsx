@@ -501,6 +501,12 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 2,
   },
+  itemOldPrice: {
+    fontSize: type.xs,
+    color: colors.muted,
+    textDecorationLine: 'line-through',
+    marginTop: 2,
+  },
   notesSection: {
     backgroundColor: 'rgba(0,0,0,0.02)',
     borderRadius: radius.md,

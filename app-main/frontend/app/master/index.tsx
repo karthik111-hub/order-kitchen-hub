@@ -262,7 +262,12 @@ export default function MasterMenu() {
             ) : null}
           </View>
           <View style={styles.rowBottom}>
-            <Text style={styles.rowPrice}>₹{item.price.toFixed(0)}</Text>
+            <View>
+              {item.old_price && item.old_price > item.price && (
+                <Text style={styles.rowOldPrice}>₹{item.old_price.toFixed(0)}</Text>
+              )}
+              <Text style={styles.rowPrice}>₹{item.price.toFixed(0)}</Text>
+            </View>
             {inCart ? (
               <View style={styles.stepper}>
                 <Pressable
