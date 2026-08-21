@@ -1,8 +1,23 @@
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8006';
+// Determine backend URL based on environment
+let BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// Fallback logic: if env var is not set, use Railway URL in production
+if (!BACKEND_URL) {
+  // Check if we're in production (not localhost)
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    // Production on Railway
+    BACKEND_URL = 'https://order-kitchen-hub-production.up.railway.app';
+  } else {
+    // Local development
+    BACKEND_URL = 'http://127.0.0.1:8006';
+  }
+}
+
 const API = `${BACKEND_URL}/api`;
 
 // Debug: log the URL being used
 console.log('[API-CONFIG] EXPO_PUBLIC_BACKEND_URL env:', process.env.EXPO_PUBLIC_BACKEND_URL);
+console.log('[API-CONFIG] window.location.hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A');
 console.log('[API-CONFIG] Using BACKEND_URL:', BACKEND_URL);
 console.log('[API-CONFIG] Final API base:', API);
 
