@@ -280,6 +280,9 @@ export default function ChefPending() {
                       <Text style={styles.itemQty}>{item.quantity}×</Text>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.itemName}>{item.name}</Text>
+                        {item.old_price && item.old_price > item.price && (
+                          <Text style={styles.itemOldPrice}>₹{item.old_price.toFixed(2)}</Text>
+                        )}
                         <Text style={styles.itemPrice}>₹{item.price.toFixed(2)}</Text>
                       </View>
                     </View>
@@ -500,6 +503,12 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: type.sm,
     color: colors.muted,
+    marginTop: 2,
+  },
+  itemOldPrice: {
+    fontSize: type.xs,
+    color: colors.muted,
+    textDecorationLine: 'line-through',
     marginTop: 2,
   },
   notesSection: {
