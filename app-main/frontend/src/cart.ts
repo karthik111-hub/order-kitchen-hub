@@ -5,6 +5,7 @@ type CartLine = {
   menu_item_id: string;
   name: string;
   price: number;
+  old_price?: number | null;
   quantity: number;
   image_base64?: string | null;
 };
@@ -24,22 +25,7 @@ export const cartStore = {
   getSnapshot() {
     return cart;
   },
-  add(item: MenuItem) {
-    const existing = cart[item.id];
-    cart = {
-      ...cart,
-      [item.id]: existing
-        ? { ...existing, quantity: existing.quantity + 1 }
-        : {
-            menu_item_id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: 1,
-            image_base64: item.image_base64 ?? null,
-          },
-    };
-    emit();
-  },
+
   increment(id: string) {
     const existing = cart[id];
     if (!existing) return;
