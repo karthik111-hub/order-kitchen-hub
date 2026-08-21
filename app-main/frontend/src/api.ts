@@ -1,5 +1,35 @@
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8006';
+// Determine backend URL dynamically at runtime (not build time)
+function getBackendUrl(): string {
+  // Try environment variable first (for build-time override)
+  const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+  if (envUrl) {
+    console.log('[API-CONFIG] Using env var EXPO_PUBLIC_BACKEND_URL:', envUrl);
+    return envUrl;
+  }
+
+  // Fallback: detect based on runtime hostname
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    console.log('[API-CONFIG] Runtime hostname:', hostname);
+    
+    // If NOT localhost, assume we're on Railway/production
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      const prodUrl = `https://${hostname}`;
+      console.log('[API-CONFIG] Production URL detected:', prodUrl);
+      return prodUrl;
+    }
+  }
+
+  // Local fallback
+  console.log('[API-CONFIG] Using localhost fallback');
+  return 'http://127.0.0.1:8006';
+}
+
+const BACKEND_URL = getBackendUrl();
 const API = `${BACKEND_URL}/api`;
+
+console.log('[API-CONFIG] Final BACKEND_URL:', BACKEND_URL);
+console.log('[API-CONFIG] Final API:', API);
 
 export type Role = 'admin' | 'master' | 'chef';
 export type ItemTag = 'most_selling' | 'must_buy';

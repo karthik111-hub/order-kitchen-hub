@@ -53,6 +53,7 @@ export default function MasterMenu() {
   const [payConfigured, setPayConfigured] = useState<boolean>(false);
   const [paying, setPaying] = useState(false);
   const [pendingIntentId, setPendingIntentId] = useState<string | null>(null);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -102,7 +103,7 @@ export default function MasterMenu() {
           setTableNumber('');
           setNotes('');
           setCartOpen(false);
-          router.push('/master/orders' as any);
+          router.push('/krfoodcourt/master/orders' as any);
         } else if (it.status === 'failed') {
           if (pollRef.current) clearInterval(pollRef.current);
           setPendingIntentId(null);
@@ -173,7 +174,7 @@ export default function MasterMenu() {
       setTableNumber('');
       setNotes('');
       setCartOpen(false);
-      router.push('/master/orders' as any);
+      router.push('/krfoodcourt/master/orders' as any);
     } catch (e: any) {
       Alert.alert('Failed to place order', e?.message ?? 'Try again');
     } finally {
@@ -241,12 +242,17 @@ export default function MasterMenu() {
     const inCart = cart[item.id];
     return (
       <View style={styles.listRow} testID={`menu-item-${item.id}`}>
-        <Image
-          source={{ uri: item.image_base64 || PLACEHOLDER_IMG }}
-          style={styles.rowImage}
-          contentFit="cover"
-          transition={150}
-        />
+        <Pressable
+          onPress={() => setEnlargedImage(item.image_base64 || PLACEHOLDER_IMG)}
+          hitSlop={4}
+        >
+          <Image
+            source={{ uri: item.image_base64 || PLACEHOLDER_IMG }}
+            style={styles.rowImage}
+            contentFit="cover"
+            transition={150}
+          />
+        </Pressable>
         <View style={{ flex: 1 }}>
           <View style={styles.rowTop}>
             <Text numberOfLines={2} style={styles.rowName}>
@@ -443,6 +449,34 @@ export default function MasterMenu() {
           </BlurView>
         </View>
       )}
+
+      <Modal
+        visible={enlargedImage !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEnlargedImage(null)}
+      >
+        <Pressable
+          style={styles.imageModalBackdrop}
+          onPress={() => setEnlargedImage(null)}
+        >
+          <View style={styles.imageModalContent}>
+            {enlargedImage && (
+              <Image
+                source={{ uri: enlargedImage }}
+                style={styles.enlargedImage}
+                contentFit="contain"
+              />
+            )}
+            <Pressable
+              style={styles.enlargedImageCloseBtn}
+              onPress={() => setEnlargedImage(null)}
+            >
+              <Ionicons name="close" size={20} color={colors.onBrandPrimary} />
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={cartOpen}
@@ -878,4 +912,33 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   draftBtnText: { color: colors.muted, fontWeight: '700', fontSize: type.base },
+  imageModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  imageModalContent: {
+    width: '100%',
+    height: '80%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enlargedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.md,
+  },
+  enlargedImageCloseBtn: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.lg,
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

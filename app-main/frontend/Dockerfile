@@ -11,6 +11,15 @@ RUN npm install --legacy-peer-deps 2>&1
 # Copy source code
 COPY . .
 
+# Expo inlines EXPO_PUBLIC_* variables into the JS bundle at build time,
+# not at container runtime. Since the frontend and backend are deployed as
+# separate Railway services (separate domains), this must be passed in as a
+# build ARG - it can't be picked up from a runtime-only env var, and the
+# hostname-based fallback in src/api.ts is only correct when frontend and
+# backend share a domain, which they do not here.
+ARG EXPO_PUBLIC_BACKEND_URL
+ENV EXPO_PUBLIC_BACKEND_URL=${EXPO_PUBLIC_BACKEND_URL}
+
 # Build static export
 RUN npx expo export --platform web --clear
 
