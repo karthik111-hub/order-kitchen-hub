@@ -90,7 +90,7 @@ export default function RoleSelect() {
       const role = selected.role;
       setSelected(null);
       setPassword('');
-      router.replace(`/${role}` as any);
+      router.replace(`/krfoodcourt/${role}` as any);
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError('Incorrect password. Please try again.');

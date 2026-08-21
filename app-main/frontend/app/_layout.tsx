@@ -29,29 +29,33 @@ export default function RootLayout() {
         // Use localStorage for web
         const storedRole = typeof window !== 'undefined' ? localStorage.getItem("userRole") : null;
         
-        // Extract first segment from pathname
+        // Extract path segments from pathname
         const segments = pathname.split("/").filter(Boolean);
-        const currentSegment = segments[0];
+        
+        // Check if path includes krfoodcourt
+        if (segments[0] === 'krfoodcourt' && segments.length > 1) {
+          const currentSegment = segments[1]; // admin, master, or chef
 
-        // If trying to access protected routes
-        if (["admin", "master", "chef"].includes(currentSegment)) {
-          // Check if user has valid role for this route
-          if (!storedRole) {
-            // No authentication at all
-            console.log(`No auth found for segment: ${currentSegment}`);
-            router.replace("/");
-            return;
+          // If trying to access protected routes
+          if (["admin", "master", "chef"].includes(currentSegment)) {
+            // Check if user has valid role for this route
+            if (!storedRole) {
+              // No authentication at all
+              console.log(`No auth found for segment: ${currentSegment}`);
+              router.replace("/");
+              return;
+            }
+            
+            if (storedRole !== currentSegment) {
+              // Logged in but with wrong role
+              console.log(`Role mismatch: trying to access /krfoodcourt/${currentSegment} but authenticated as ${storedRole}`);
+              router.replace("/");
+              return;
+            }
+            
+            // Valid role for this route - allow access
+            console.log(`Auth valid: ${storedRole} accessing /krfoodcourt/${storedRole}`);
           }
-          
-          if (storedRole !== currentSegment) {
-            // Logged in but with wrong role
-            console.log(`Role mismatch: trying to access ${currentSegment} but authenticated as ${storedRole}`);
-            router.replace("/");
-            return;
-          }
-          
-          // Valid role for this route - allow access
-          console.log(`Auth valid: ${storedRole} accessing /${storedRole}`);
         }
       } catch (e) {
         console.error("Auth check error:", e);

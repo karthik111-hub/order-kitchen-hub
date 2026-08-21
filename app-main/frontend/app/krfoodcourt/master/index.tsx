@@ -103,7 +103,7 @@ export default function MasterMenu() {
           setTableNumber('');
           setNotes('');
           setCartOpen(false);
-          router.push('/master/orders' as any);
+          router.push('/krfoodcourt/master/orders' as any);
         } else if (it.status === 'failed') {
           if (pollRef.current) clearInterval(pollRef.current);
           setPendingIntentId(null);
@@ -174,7 +174,7 @@ export default function MasterMenu() {
       setTableNumber('');
       setNotes('');
       setCartOpen(false);
-      router.push('/master/orders' as any);
+      router.push('/krfoodcourt/master/orders' as any);
     } catch (e: any) {
       Alert.alert('Failed to place order', e?.message ?? 'Try again');
     } finally {
