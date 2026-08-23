@@ -273,8 +273,10 @@ async def list_menu(category: Optional[str] = None, admin: bool = False):
         query["category"] = category
     if not admin:
         query["is_available"] = True
-    items = await db.menu_items.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    return [MenuItem(**it) for it in items]
+    items = await db.menu_items.find(query, {"_id": 0}).to_list(1000)
+    items_sorted = sorted(items, key=lambda x: x.get("created_at", ""), reverse=True)
+    return [MenuItem(**it) for it in items_sorted]
+
 
 
 @api_router.post("/menu")
