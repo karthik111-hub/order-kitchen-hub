@@ -160,8 +160,8 @@ export const api = {
     fetch(`${API}/menu/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
 
   listCustomerOrders: (customerId: string) =>
-    fetch(\\/orders/customer/\\).then(r => handle<Order[]>(r)),
-    listOrders: (status?: OrderStatus) => {
+    fetch(`${API}/orders/customer/${customerId}`).then(r => handle<Order[]>(r)),
+  listOrders: (status?: OrderStatus) => {
     const q = status ? `?status=${status}` : '';
     return fetch(`${API}/orders${q}`).then(r => handle<Order[]>(r));
   },
@@ -237,4 +237,3 @@ export const api = {
     return `${API}/reports/daily.xlsx${q}`;
   },
 };
-
