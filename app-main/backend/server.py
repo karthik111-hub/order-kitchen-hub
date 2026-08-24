@@ -394,6 +394,18 @@ async def create_order(payload: OrderCreate):
         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
 
 
+@api_router.get("/orders/customer/{customer_id}", response_model=List[Order])
+async def list_customer_orders(customer_id: str):
+    try:
+        query = {"customer_id": customer_id}
+        orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
+        logger.info(f"Found {len(orders)} orders for customer {customer_id}")
+        return [Order(**o) for o in orders]
+    except Exception as e:
+        logger.error(f"Error listing customer orders: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error listing customer orders: {str(e)}")
+
+
 @api_router.patch("/orders/{order_id}/status", response_model=Order)
 async def update_order_status(order_id: str, payload: OrderStatusUpdate):
     updated_at = now_iso()
@@ -885,3 +897,5 @@ app.include_router(api_router)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+

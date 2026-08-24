@@ -159,7 +159,9 @@ export const api = {
   deleteMenuItem: (id: string) =>
     fetch(`${API}/menu/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
 
-  listOrders: (status?: OrderStatus) => {
+  listCustomerOrders: (customerId: string) =>
+    fetch(\\/orders/customer/\\).then(r => handle<Order[]>(r)),
+    listOrders: (status?: OrderStatus) => {
     const q = status ? `?status=${status}` : '';
     return fetch(`${API}/orders${q}`).then(r => handle<Order[]>(r));
   },
@@ -235,3 +237,4 @@ export const api = {
     return `${API}/reports/daily.xlsx${q}`;
   },
 };
+

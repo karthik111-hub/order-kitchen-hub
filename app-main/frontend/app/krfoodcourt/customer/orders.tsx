@@ -34,7 +34,14 @@ export default function CustomerOrders() {
 
   const load = useCallback(async () => {
     try {
-      const allOrders = await api.listOrders();
+      const customerId = 'customer-' + Date.now(); // Use consistent ID from sessionStorage or localStorage
+      // Try to get customerId from storage
+      let id = customerId;
+      if (typeof window !== 'undefined') {
+        const stored = window.sessionStorage.getItem('customerId') || window.localStorage.getItem('customerId');
+        if (stored) id = stored;
+      }
+      const allOrders = await api.listCustomerOrders(id);
       setOrders(allOrders);
     } catch (e: any) {
       console.warn('Orders load failed', e?.message);
@@ -287,3 +294,4 @@ const styles = StyleSheet.create({
   },
   paidText: { fontSize: type.xs, fontWeight: '800', color: colors.success, letterSpacing: 0.3 },
 });
+
