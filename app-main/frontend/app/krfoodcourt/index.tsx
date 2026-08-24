@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as SecureStore from 'expo-secure-store';
 import { api, Role } from '@/src/api';
 import { colors, spacing, radius, type, shadow } from '@/src/theme';
 
@@ -52,6 +53,14 @@ const OPTIONS: RoleOption[] = [
       'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&w=1200&q=80',
   },
 ];
+
+const GUEST_OPTION = {
+  title: 'Guest',
+  sub: 'Place your own order',
+  icon: 'person-outline' as keyof typeof Ionicons.glyphMap,
+  image:
+    'https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1200&q=80',
+};
 
 export default function RoleSelect() {
   const router = useRouter();
@@ -99,6 +108,22 @@ export default function RoleSelect() {
     }
   };
 
+  const submitGuest = async () => {
+    setSubmitting(true);
+    try {
+      const guestId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      await SecureStore.setItemAsync('guestId', guestId);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSelected(null);
+      router.replace('/krfoodcourt/guest' as any);
+    } catch (e: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError('Failed to create guest session');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -137,6 +162,29 @@ export default function RoleSelect() {
             </ImageBackground>
           </Pressable>
         ))}
+        <Pressable
+          testID="role-guest-card"
+          onPress={submitGuest}
+          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+        >
+          <ImageBackground
+            source={{ uri: GUEST_OPTION.image }}
+            style={styles.cardImage}
+            imageStyle={styles.cardImageInner}
+          >
+            <View style={styles.overlay} />
+            <View style={styles.cardContent}>
+              <View style={styles.iconPill}>
+                <Ionicons name={GUEST_OPTION.icon} size={14} color={colors.onBrandPrimary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>{GUEST_OPTION.title}</Text>
+                <Text style={styles.cardSub}>{GUEST_OPTION.sub}</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color={colors.onBrandPrimary} />
+            </View>
+          </ImageBackground>
+        </Pressable>
       </View>
 
       <View style={styles.footer}>
