@@ -27,6 +27,9 @@ import { api, MenuItem, ItemTag } from '@/src/api';
 import { cartStore, useCart } from '@/src/cart';
 import { colors, radius, spacing, type, thumb, shadow } from '@/src/theme';
 
+const PLACEHOLDER_IMG =
+  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=60';
+
 const tagLabel = (tag: ItemTag) =>
   tag === 'must_buy' ? 'MUST BUY' : 'MOST SELLING';
 const tagColor = (tag: ItemTag) =>
@@ -34,7 +37,7 @@ const tagColor = (tag: ItemTag) =>
 
 type Section = { category: string; items: MenuItem[] };
 
-export default function customerMenu() {
+export default function CustomerMenu() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -155,11 +158,6 @@ export default function customerMenu() {
     return rows;
   }, [sections]);
 
-  const handleQuickOrder = useCallback((item: MenuItem) => {
-    cartStore.add(item);
-    setTimeout(() => setCartOpen(true), 200);
-  }, []);
-
   const placeOrder = async () => {
     if (lines.length === 0) return;
     try {
@@ -208,102 +206,113 @@ export default function customerMenu() {
     router.replace('/krfoodcourt' as any);
   };
 
-  const renderRow = useCallback(
-    ({
-      item: row,
-    }: {
-      item: (typeof flatData)[number];
-    }) => {
-      if (row.type === 'header') {
-        return (
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{row.category}</Text>
-            <Text style={styles.sectionCount}>{row.count}</Text>
-          </View>
-        );
-      }
-      const item = row.item;
-      const inCart = cart[item.id];
+  const renderRow = ({
+    item: row,
+  }: {
+    item: (typeof flatData)[number];
+  }) => {
+    if (row.type === 'header') {
       return (
-        <Pressable
-          onPress={() => handleQuickOrder(item)}
-          style={styles.listRow}
-          testID={`menu-item-${item.id}`}
-        >
-          <View style={{ flex: 1 }}>
-            <View style={styles.rowTop}>
-              <Text numberOfLines={2} style={styles.rowName}>
-                {item.name}
-              </Text>
-              {item.tag ? (
-                <View style={[styles.tagPill, { backgroundColor: tagColor(item.tag) + '22' }]}>
-                  <Ionicons name="star" size={8} color={tagColor(item.tag)} />
-                  <Text style={[styles.tagText, { color: tagColor(item.tag) }]}>
-                    {tagLabel(item.tag)}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-            <View style={styles.rowBottom}>
-              <View>
-                {item.old_price && item.old_price > item.price && (
-                  <Text style={styles.rowOldPrice}>₹{item.old_price.toFixed(0)}</Text>
-                )}
-                <Text style={styles.rowPrice}>₹{item.price.toFixed(0)}</Text>
-              </View>
-              {inCart ? (
-                <View style={styles.stepper}>
-                  <Pressable
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      cartStore.decrement(item.id);
-                    }}
-                    style={styles.stepBtn}
-                  >
-                    <Ionicons name="remove" size={12} color={colors.brand} />
-                  </Pressable>
-                  <Text style={styles.stepQty}>{inCart.quantity}</Text>
-                  <Pressable
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      cartStore.increment(item.id);
-                    }}
-                    style={styles.stepBtn}
-                  >
-                    <Ionicons name="add" size={12} color={colors.brand} />
-                  </Pressable>
-                </View>
-              ) : (
-                <Pressable style={styles.quickAddBtn} onPress={() => handleQuickOrder(item)}>
-                  <Ionicons name="add-circle" size={20} color={colors.brand} />
-                </Pressable>
-              )}
-            </View>
-          </View>
-        </Pressable>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{row.category}</Text>
+          <Text style={styles.sectionCount}>{row.count}</Text>
+        </View>
       );
-    },
-    [cart, cartStore, handleQuickOrder],
-  );
+    }
+    const item = row.item;
+    const inCart = cart[item.id];
+    return (
+      <View style={styles.listRow} testID={`menu-item-${item.id}`}>
+        <Pressable
+          onPress={() => setEnlargedImage(item.image_base64 || PLACEHOLDER_IMG)}
+          hitSlop={4}
+        >
+          <Image
+            source={{ uri: item.image_base64 || PLACEHOLDER_IMG }}
+            style={styles.rowImage}
+            contentFit="cover"
+            transition={150}
+          />
+        </Pressable>
+        <View style={{ flex: 1 }}>
+          <View style={styles.rowTop}>
+            <Text numberOfLines={2} style={styles.rowName}>
+              {item.name}
+            </Text>
+            {item.tag ? (
+              <View style={[styles.tagPill, { backgroundColor: tagColor(item.tag) + '22' }]}>
+                <Ionicons name="star" size={8} color={tagColor(item.tag)} />
+                <Text style={[styles.tagText, { color: tagColor(item.tag) }]}>
+                  {tagLabel(item.tag)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.rowBottom}>
+            <View>
+              {item.old_price && item.old_price > item.price && (
+                <Text style={styles.rowOldPrice}>₹{item.old_price.toFixed(0)}</Text>
+              )}
+              <Text style={styles.rowPrice}>₹{item.price.toFixed(0)}</Text>
+            </View>
+            {inCart ? (
+              <View style={styles.stepper}>
+                <Pressable
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    cartStore.decrement(item.id);
+                  }}
+                  style={styles.stepBtn}
+                >
+                  <Ionicons name="remove" size={12} color={colors.brand} />
+                </Pressable>
+                <Text style={styles.stepQty}>{inCart.quantity}</Text>
+                <Pressable
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    cartStore.increment(item.id);
+                  }}
+                  style={styles.stepBtn}
+                >
+                  <Ionicons name="add" size={12} color={colors.brand} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  cartStore.add(item);
+                }}
+                style={styles.addBtn}
+              >
+                <Text style={styles.addBtnText}>ADD</Text>
+                <Ionicons name="add" size={10} color={colors.brand} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.hello}>Order Now</Text>
-          <Text style={styles.headerSub}>{items.length} items · tap to add</Text>
+          <Text style={styles.hello}>Place an order</Text>
+          <Text style={styles.headerSub}>{items.length} items on the menu</Text>
         </View>
         <Pressable
           onPress={() => router.push('/krfoodcourt/customer/orders' as any)}
-          style={styles.actionBtn}
+          style={styles.switchBtn}
         >
-          <Ionicons name="document-text" size={16} color={colors.brand} />
+          <Ionicons name="document-text" size={14} color={colors.brand} />
         </Pressable>
         <Pressable
           onPress={handleLogout}
-          style={styles.actionBtn}
+          style={styles.switchBtn}
         >
-          <Ionicons name="log-out" size={16} color={colors.brand} />
+          <Ionicons name="log-out" size={14} color={colors.brand} />
         </Pressable>
       </View>
 
@@ -356,8 +365,13 @@ export default function customerMenu() {
         </View>
       ) : items.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="restaurant-outline" size={28} color={colors.brand} />
+          <View style={styles.emptyIcon}>
+            <Ionicons name="restaurant-outline" size={28} color={colors.brand} />
+          </View>
           <Text style={styles.emptyTitle}>Menu is empty</Text>
+          <Text style={styles.emptySub}>
+            The menu is currently not available.
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -380,6 +394,15 @@ export default function customerMenu() {
               }}
               tintColor={colors.brand}
             />
+          }
+          ListEmptyComponent={
+            searchQuery.trim().length > 0 ? (
+              <View style={styles.noMatch}>
+                <Ionicons name="search-outline" size={22} color={colors.muted} />
+                <Text style={styles.noMatchTitle}>No dishes match "{searchQuery}"</Text>
+                <Text style={styles.noMatchSub}>Try a different name or clear the search.</Text>
+              </View>
+            ) : null
           }
         />
       )}
@@ -405,33 +428,33 @@ export default function customerMenu() {
         </View>
       )}
 
-      {enlargedImage && (
-        <Modal
-          visible={enlargedImage !== null}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setEnlargedImage(null)}
+      <Modal
+        visible={enlargedImage !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEnlargedImage(null)}
+      >
+        <Pressable
+          style={styles.imageModalBackdrop}
+          onPress={() => setEnlargedImage(null)}
         >
-          <Pressable
-            style={styles.imageModalBackdrop}
-            onPress={() => setEnlargedImage(null)}
-          >
-            <View style={styles.imageModalContent}>
+          <View style={styles.imageModalContent}>
+            {enlargedImage && (
               <Image
                 source={{ uri: enlargedImage }}
                 style={styles.enlargedImage}
                 contentFit="contain"
               />
-              <Pressable
-                style={styles.enlargedImageCloseBtn}
-                onPress={() => setEnlargedImage(null)}
-              >
-                <Ionicons name="close" size={20} color={colors.onBrandPrimary} />
-              </Pressable>
-            </View>
-          </Pressable>
-        </Modal>
-      )}
+            )}
+            <Pressable
+              style={styles.enlargedImageCloseBtn}
+              onPress={() => setEnlargedImage(null)}
+            >
+              <Ionicons name="close" size={20} color={colors.onBrandPrimary} />
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={cartOpen}
@@ -557,15 +580,19 @@ const styles = StyleSheet.create({
   },
   hello: { fontSize: type.xxl, fontWeight: '800', color: colors.onSurface, letterSpacing: -0.5 },
   headerSub: { color: colors.muted, marginTop: 2, fontSize: type.sm },
-  actionBtn: {
-    width: 36,
-    height: 36,
+  switchBtn: {
+    width: 30,
+    height: 30,
     borderRadius: radius.pill,
     backgroundColor: colors.brandTertiary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  chipsRow: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.sm },
+  chipsRow: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
   searchWrap: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.xs,
@@ -580,8 +607,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  searchInput: { flex: 1, color: colors.onSurface, fontSize: type.base, paddingVertical: 4 },
+  searchInput: {
+    flex: 1,
+    color: colors.onSurface,
+    fontSize: type.base,
+    paddingVertical: 4,
+  },
   searchClear: { paddingHorizontal: 2 },
+  noMatch: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl,
+    gap: spacing.xs,
+  },
+  noMatchTitle: {
+    marginTop: spacing.sm,
+    fontSize: type.base,
+    fontWeight: '800',
+    color: colors.onSurface,
+  },
+  noMatchSub: { color: colors.muted, fontSize: type.sm },
   chip: {
     height: 26,
     paddingHorizontal: spacing.md,
@@ -597,8 +642,23 @@ const styles = StyleSheet.create({
   chipText: { color: colors.onSurfaceTertiary, fontWeight: '700', fontSize: type.sm },
   chipTextActive: { color: colors.onBrandPrimary },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
+  emptyIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: radius.pill,
+    backgroundColor: colors.brandTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
   emptyTitle: { fontSize: type.lg, fontWeight: '800', color: colors.onSurface },
+  emptySub: {
+    marginTop: 4,
+    textAlign: 'center',
+    color: colors.onSurfaceTertiary,
+    fontSize: type.sm,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -606,30 +666,96 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
-  sectionTitle: { fontSize: type.lg, fontWeight: '800', color: colors.onSurface, letterSpacing: -0.3 },
-  sectionCount: { fontSize: type.sm, color: colors.muted, fontWeight: '600' },
+  sectionTitle: {
+    fontSize: type.lg,
+    fontWeight: '800',
+    color: colors.onSurface,
+    letterSpacing: -0.3,
+  },
+  sectionCount: {
+    fontSize: type.sm,
+    color: colors.muted,
+    fontWeight: '600',
+  },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.surfaceSecondary,
-    padding: spacing.md,
+    padding: spacing.sm,
     borderRadius: radius.md,
     marginBottom: spacing.sm,
     ...shadow.soft,
   },
+  rowImage: {
+    width: thumb.md,
+    height: thumb.md,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceTertiary,
+  },
   rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
-  rowName: { flex: 1, fontSize: type.base, fontWeight: '700', color: colors.onSurface },
-  tagPill: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: radius.sm },
+  rowName: {
+    flex: 1,
+    fontSize: type.base,
+    fontWeight: '700',
+    color: colors.onSurface,
+  },
+  tagPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
   tagText: { fontSize: type.xs, fontWeight: '800', letterSpacing: 0.3 },
-  rowBottom: { marginTop: spacing.xs, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rowBottom: {
+    marginTop: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   rowPrice: { fontSize: type.lg, fontWeight: '800', color: colors.onSurface },
-  rowOldPrice: { fontSize: type.sm, color: colors.muted, textDecorationLine: 'line-through', marginBottom: 2 },
-  quickAddBtn: { padding: spacing.xs },
-  stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.brand, borderRadius: radius.sm, overflow: 'hidden' },
+  rowOldPrice: { 
+    fontSize: type.sm, 
+    color: colors.muted, 
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+  },
+  addBtnText: { color: colors.brand, fontWeight: '800', fontSize: type.sm, letterSpacing: 0.5 },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.brand,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+  },
   stepBtn: { paddingHorizontal: spacing.sm, paddingVertical: 3 },
-  stepQty: { minWidth: 16, textAlign: 'center', color: colors.brand, fontWeight: '800', fontSize: type.base },
-  stickyCartWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: spacing.lg },
+  stepQty: {
+    minWidth: 16,
+    textAlign: 'center',
+    color: colors.brand,
+    fontWeight: '800',
+    fontSize: type.base,
+  },
+  stickyCartWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.lg,
+  },
   stickyCart: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -646,28 +772,116 @@ const styles = StyleSheet.create({
   cartInfo: { flex: 1 },
   cartQty: { color: colors.onSurfaceTertiary, fontSize: type.sm, fontWeight: '600' },
   cartTotal: { color: colors.onSurface, fontSize: type.lg, fontWeight: '800' },
-  viewCartBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.brand, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill },
+  viewCartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.brand,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+  },
   viewCartText: { color: colors.onBrandPrimary, fontWeight: '800', fontSize: type.base },
+
   modalRoot: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
-  sheet: { backgroundColor: colors.surfaceSecondary, padding: spacing.lg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, paddingBottom: spacing.xl },
-  handle: { alignSelf: 'center', width: 30, height: 3, borderRadius: 2, backgroundColor: colors.borderStrong, marginBottom: spacing.md },
+  sheet: {
+    backgroundColor: colors.surfaceSecondary,
+    padding: spacing.lg,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    paddingBottom: spacing.xl,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 30,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.borderStrong,
+    marginBottom: spacing.md,
+  },
   sheetTitle: { fontSize: type.lg, fontWeight: '800', color: colors.onSurface, marginBottom: spacing.sm },
-  cartRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  cartRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
   cartRowName: { color: colors.onSurface, fontWeight: '700', fontSize: type.base },
   cartRowPrice: { color: colors.muted, fontSize: type.sm, marginTop: 2 },
   divider: { height: 1, backgroundColor: colors.divider, marginVertical: spacing.sm },
-  input: { backgroundColor: colors.surfaceTertiary, padding: spacing.md, borderRadius: radius.md, color: colors.onSurface, marginBottom: spacing.sm, fontSize: type.base },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm, marginBottom: spacing.sm },
+  input: {
+    backgroundColor: colors.surfaceTertiary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    color: colors.onSurface,
+    marginBottom: spacing.sm,
+    fontSize: type.base,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   totalLabel: { color: colors.onSurfaceTertiary, fontSize: type.base, fontWeight: '600' },
   totalValue: { color: colors.onSurface, fontSize: type.lg, fontWeight: '800' },
-  placeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.brand, paddingVertical: spacing.md, borderRadius: radius.pill },
+  placeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.brand,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+  },
   placeBtnText: { color: colors.onBrandPrimary, fontWeight: '800', fontSize: type.base },
-  payBtn: { marginTop: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.surfaceSecondary, borderWidth: 1.5, borderColor: colors.brand, paddingVertical: spacing.md, borderRadius: radius.pill },
+  payBtn: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1.5,
+    borderColor: colors.brand,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+  },
   payBtnText: { color: colors.brand, fontWeight: '800', fontSize: type.base },
-  payHint: { marginTop: 4, textAlign: 'center', color: colors.muted, fontSize: type.sm },
-  imageModalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.md },
-  imageModalContent: { width: '100%', height: '80%', alignItems: 'center', justifyContent: 'center' },
-  enlargedImage: { width: '100%', height: '100%', borderRadius: radius.md },
-  enlargedImageCloseBtn: { position: 'absolute', top: spacing.lg, right: spacing.lg, width: 40, height: 40, borderRadius: radius.pill, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
+  payHint: {
+    marginTop: 4,
+    textAlign: 'center',
+    color: colors.muted,
+    fontSize: type.sm,
+  },
+  imageModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  imageModalContent: {
+    width: '100%',
+    height: '80%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enlargedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.md,
+  },
+  enlargedImageCloseBtn: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.lg,
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
