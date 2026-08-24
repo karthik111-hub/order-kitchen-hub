@@ -27,6 +27,52 @@ const TAG_OPTIONS: { key: ItemTag | null; label: string; color: string }[] = [
   { key: 'most_selling', label: 'Most Selling', color: colors.mostSelling },
 ];
 
+// Menu item images are stored as base64 directly in Mongo and returned inline
+// for every item in GET /api/menu. Full-resolution photos from a phone camera
+// (even after expo-image-picker's JPEG quality compression) can still be
+// several MB each once base64-encoded, and with several items carrying
+// images the combined /api/menu response can grow into tens of MB. Large
+// HTTP/2 responses like that have been triggering ERR_HTTP2_PROTOCOL_ERROR
+// on Railway's edge. Downscaling to a reasonable display size before upload
+// keeps each image in the tens-of-KB range and avoids the issue.
+// This runs on the web build (what's deployed to Railway) via Canvas; on
+// native platforms there's no DOM canvas, so the original (already
+// quality-compressed) image is used as-is.
+const MAX_IMAGE_DIMENSION = 800;
+const IMAGE_JPEG_QUALITY = 0.7;
+
+async function downscaleImageForWeb(dataUrl: string): Promise<string> {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') {
+    return dataUrl;
+  }
+  try {
+    const img = new (window as any).Image();
+    const loaded: HTMLImageElement = await new Promise((resolve, reject) => {
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+    const scale = Math.min(
+      1,
+      MAX_IMAGE_DIMENSION / Math.max(loaded.width, loaded.height),
+    );
+    if (scale >= 1) {
+      // Already small enough
+      return dataUrl;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(loaded.width * scale);
+    canvas.height = Math.round(loaded.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return dataUrl;
+    ctx.drawImage(loaded, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', IMAGE_JPEG_QUALITY);
+  } catch (err) {
+    console.warn('[IMAGE] Downscale failed, using original image:', err);
+    return dataUrl;
+  }
+}
+
 export default function AdminItems() {
   const [cats, setCats] = useState<Category[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -115,7 +161,9 @@ export default function AdminItems() {
       base64: true,
     });
     if (!result.canceled && result.assets[0]?.base64) {
-      setImageBase64(`data:image/jpeg;base64,${result.assets[0].base64}`);
+      const rawDataUrl = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      const resized = await downscaleImageForWeb(rawDataUrl);
+      setImageBase64(resized);
     }
   };
 

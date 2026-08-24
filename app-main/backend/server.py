@@ -40,10 +40,18 @@ logger.info(f"Environment: RAILWAY_ENVIRONMENT={os.environ.get('RAILWAY_ENVIRONM
 logger.info(f"Loaded DB_NAME: {os.environ.get('DB_NAME', 'NOT_SET')}")
 logger.info(f"ADMIN_PASSWORD set: {bool(os.environ.get('ADMIN_PASSWORD'))}")
 
+def _clean_password_env(name: str) -> str:
+    # Railway dashboard values (and copy-pasted secrets in general) can pick
+    # up a trailing newline or surrounding whitespace, which silently breaks
+    # an exact string comparison at login even though the password "looks"
+    # right. Strip it here so login isn't sensitive to that.
+    return os.environ.get(name, "").strip()
+
+
 ROLE_PASSWORDS = {
-    "admin": os.environ.get("ADMIN_PASSWORD", ""),
-    "master": os.environ.get("MASTER_PASSWORD", ""),
-    "chef": os.environ.get("CHEF_PASSWORD", ""),
+    "admin": _clean_password_env("ADMIN_PASSWORD"),
+    "master": _clean_password_env("MASTER_PASSWORD"),
+    "chef": _clean_password_env("CHEF_PASSWORD"),
 }
 logger.info(f"Passwords loaded - Admin: {bool(ROLE_PASSWORDS['admin'])}, Master: {bool(ROLE_PASSWORDS['master'])}, Chef: {bool(ROLE_PASSWORDS['chef'])}")
 
@@ -208,7 +216,16 @@ async def root():
 @api_router.post("/auth/verify")
 async def verify_role(payload: AuthRequest):
     expected = ROLE_PASSWORDS.get(payload.role, "")
-    if not expected or payload.password != expected:
+    submitted = payload.password.strip()
+    if not expected or submitted != expected:
+        # Never log the actual password values, but log enough to diagnose
+        # "correct password rejected" issues (e.g. env var not set, or a
+        # length mismatch pointing at stray whitespace in the stored value).
+        logger.warning(
+            f"[AUTH] Failed login for role={payload.role}: "
+            f"expected_set={bool(expected)}, expected_len={len(expected)}, "
+            f"submitted_len={len(submitted)}"
+        )
         raise HTTPException(status_code=401, detail="Invalid password")
     return {"ok": True, "role": payload.role}
 
