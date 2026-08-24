@@ -54,8 +54,8 @@ const OPTIONS: RoleOption[] = [
   },
 ];
 
-const GUEST_OPTION = {
-  title: 'Guest',
+const CUSTOMER_OPTION = {
+  title: 'Customer',
   sub: 'Place your own order',
   icon: 'person-outline' as keyof typeof Ionicons.glyphMap,
   image:
@@ -108,17 +108,17 @@ export default function RoleSelect() {
     }
   };
 
-  const submitGuest = async () => {
+  const submitCustomer = async () => {
     setSubmitting(true);
     try {
-      const guestId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await SecureStore.setItemAsync('guestId', guestId);
+      const customerId = `customer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      await SecureStore.setItemAsync('customerId', customerId);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelected(null);
-      router.replace('/krfoodcourt/guest' as any);
+      router.replace('/krfoodcourt/customer' as any);
     } catch (e: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError('Failed to create guest session');
+      setError('Failed to create customer session');
     } finally {
       setSubmitting(false);
     }
@@ -163,23 +163,23 @@ export default function RoleSelect() {
           </Pressable>
         ))}
         <Pressable
-          testID="role-guest-card"
-          onPress={submitGuest}
+          testID="role-customer-card"
+          onPress={submitCustomer}
           style={({ pressed }) => [styles.card, pressed && styles.pressed]}
         >
           <ImageBackground
-            source={{ uri: GUEST_OPTION.image }}
+            source={{ uri: CUSTOMER_OPTION.image }}
             style={styles.cardImage}
             imageStyle={styles.cardImageInner}
           >
             <View style={styles.overlay} />
             <View style={styles.cardContent}>
               <View style={styles.iconPill}>
-                <Ionicons name={GUEST_OPTION.icon} size={14} color={colors.onBrandPrimary} />
+                <Ionicons name={CUSTOMER_OPTION.icon} size={14} color={colors.onBrandPrimary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>{GUEST_OPTION.title}</Text>
-                <Text style={styles.cardSub}>{GUEST_OPTION.sub}</Text>
+                <Text style={styles.cardTitle}>{CUSTOMER_OPTION.title}</Text>
+                <Text style={styles.cardSub}>{CUSTOMER_OPTION.sub}</Text>
               </View>
               <Ionicons name="arrow-forward" size={16} color={colors.onBrandPrimary} />
             </View>

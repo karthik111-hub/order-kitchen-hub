@@ -18,28 +18,28 @@ import { api, Order } from '@/src/api';
 import { cartStore } from '@/src/cart';
 import { colors, radius, spacing, type, shadow } from '@/src/theme';
 
-export default function GuestOrders() {
+export default function customerOrders() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [guestId, setGuestId] = useState<string | null>(null);
+  const [customerId, setcustomerId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const id = await SecureStore.getItemAsync('guestId');
+      const id = await SecureStore.getItemAsync('customerId');
       if (!id) {
         router.replace('/krfoodcourt' as any);
         return;
       }
-      setGuestId(id);
+      setcustomerId(id);
 
-      // Fetch all orders and filter to only those created by this guest (rough approximation)
-      // In a real app, you'd have a /api/orders/{guestId} endpoint
+      // Fetch all orders and filter to only those created by this customer (rough approximation)
+      // In a real app, you'd have a /api/orders/{customerId} endpoint
       const allOrders = await api.listOrders();
-      // Since we don't have guest tracking, show all orders (simplified for now)
-      // TODO: Backend should track guestId in Order model
+      // Since we don't have customer tracking, show all orders (simplified for now)
+      // TODO: Backend should track customerId in Order model
       setOrders(allOrders);
     } catch (e: any) {
       console.warn('Orders load failed', e?.message);
@@ -86,7 +86,7 @@ export default function GuestOrders() {
   };
 
   const handleLogout = async () => {
-    await SecureStore.deleteItemAsync('guestId');
+    await SecureStore.deleteItemAsync('customerId');
     cartStore.clear();
     router.replace('/krfoodcourt' as any);
   };
@@ -144,7 +144,7 @@ export default function GuestOrders() {
         </View>
         <View style={styles.headerActions}>
           <Pressable
-            onPress={() => router.push('/krfoodcourt/guest' as any)}
+            onPress={() => router.push('/krfoodcourt/customer' as any)}
             style={styles.actionBtn}
           >
             <Ionicons name="add-circle" size={18} color={colors.brand} />
@@ -168,7 +168,7 @@ export default function GuestOrders() {
           <Text style={styles.emptyTitle}>No orders yet</Text>
           <Text style={styles.emptyText}>Start by placing an order from the menu</Text>
           <Pressable
-            onPress={() => router.push('/krfoodcourt/guest' as any)}
+            onPress={() => router.push('/krfoodcourt/customer' as any)}
             style={styles.browseBtn}
           >
             <Text style={styles.browseBtnText}>Browse Menu</Text>

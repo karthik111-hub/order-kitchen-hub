@@ -34,7 +34,7 @@ const tagColor = (tag: ItemTag) =>
 
 type Section = { category: string; items: MenuItem[] };
 
-export default function GuestMenu() {
+export default function customerMenu() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -99,7 +99,7 @@ export default function GuestMenu() {
           setTableNumber('');
           setNotes('');
           setCartOpen(false);
-          router.push('/krfoodcourt/guest/orders' as any);
+          router.push('/krfoodcourt/customer/orders' as any);
         } else if (it.status === 'failed') {
           if (pollRef.current) clearInterval(pollRef.current);
           setPendingIntentId(null);
@@ -174,7 +174,7 @@ export default function GuestMenu() {
       setTableNumber('');
       setNotes('');
       setCartOpen(false);
-      router.push('/krfoodcourt/guest/orders' as any);
+      router.push('/krfoodcourt/customer/orders' as any);
     } catch (e: any) {
       Alert.alert('Failed to place order', e?.message ?? 'Try again');
     } finally {
@@ -203,7 +203,7 @@ export default function GuestMenu() {
   };
 
   const handleLogout = async () => {
-    await SecureStore.deleteItemAsync('guestId');
+    await SecureStore.deleteItemAsync('customerId');
     cartStore.clear();
     router.replace('/krfoodcourt' as any);
   };
@@ -294,7 +294,7 @@ export default function GuestMenu() {
           <Text style={styles.headerSub}>{items.length} items · tap to add</Text>
         </View>
         <Pressable
-          onPress={() => router.push('/krfoodcourt/guest/orders' as any)}
+          onPress={() => router.push('/krfoodcourt/customer/orders' as any)}
           style={styles.actionBtn}
         >
           <Ionicons name="document-text" size={16} color={colors.brand} />
