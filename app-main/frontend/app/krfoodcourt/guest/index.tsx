@@ -27,9 +27,6 @@ import { api, MenuItem, ItemTag } from '@/src/api';
 import { cartStore, useCart } from '@/src/cart';
 import { colors, radius, spacing, type, thumb, shadow } from '@/src/theme';
 
-const PLACEHOLDER_IMG =
-  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=60';
-
 const tagLabel = (tag: ItemTag) =>
   tag === 'must_buy' ? 'MUST BUY' : 'MOST SELLING';
 const tagColor = (tag: ItemTag) =>
@@ -158,6 +155,11 @@ export default function GuestMenu() {
     return rows;
   }, [sections]);
 
+  const handleQuickOrder = useCallback((item: MenuItem) => {
+    cartStore.add(item);
+    setTimeout(() => setCartOpen(true), 200);
+  }, []);
+
   const placeOrder = async () => {
     if (lines.length === 0) return;
     try {
@@ -206,107 +208,102 @@ export default function GuestMenu() {
     router.replace('/krfoodcourt' as any);
   };
 
-  const renderRow = ({
-    item: row,
-  }: {
-    item: (typeof flatData)[number];
-  }) => {
-    if (row.type === 'header') {
+  const renderRow = useCallback(
+    ({
+      item: row,
+    }: {
+      item: (typeof flatData)[number];
+    }) => {
+      if (row.type === 'header') {
+        return (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{row.category}</Text>
+            <Text style={styles.sectionCount}>{row.count}</Text>
+          </View>
+        );
+      }
+      const item = row.item;
+      const inCart = cart[item.id];
       return (
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{row.category}</Text>
-          <Text style={styles.sectionCount}>{row.count}</Text>
-        </View>
-      );
-    }
-    const item = row.item;
-    const inCart = cart[item.id];
-    return (
-      <View style={styles.listRow} testID={`menu-item-${item.id}`}>
         <Pressable
-          onPress={() => setEnlargedImage(item.image_base64 || PLACEHOLDER_IMG)}
-          hitSlop={4}
+          onPress={() => handleQuickOrder(item)}
+          style={styles.listRow}
+          testID={`menu-item-${item.id}`}
         >
-          <Image
-            source={{ uri: item.image_base64 || PLACEHOLDER_IMG }}
-            style={styles.rowImage}
-            contentFit="cover"
-            transition={150}
-          />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <View style={styles.rowTop}>
-            <Text numberOfLines={2} style={styles.rowName}>
-              {item.name}
-            </Text>
-            {item.tag ? (
-              <View style={[styles.tagPill, { backgroundColor: tagColor(item.tag) + '22' }]}>
-                <Ionicons name="star" size={8} color={tagColor(item.tag)} />
-                <Text style={[styles.tagText, { color: tagColor(item.tag) }]}>
-                  {tagLabel(item.tag)}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-          <View style={styles.rowBottom}>
-            <View>
-              {item.old_price && item.old_price > item.price && (
-                <Text style={styles.rowOldPrice}>₹{item.old_price.toFixed(0)}</Text>
-              )}
-              <Text style={styles.rowPrice}>₹{item.price.toFixed(0)}</Text>
+          <View style={{ flex: 1 }}>
+            <View style={styles.rowTop}>
+              <Text numberOfLines={2} style={styles.rowName}>
+                {item.name}
+              </Text>
+              {item.tag ? (
+                <View style={[styles.tagPill, { backgroundColor: tagColor(item.tag) + '22' }]}>
+                  <Ionicons name="star" size={8} color={tagColor(item.tag)} />
+                  <Text style={[styles.tagText, { color: tagColor(item.tag) }]}>
+                    {tagLabel(item.tag)}
+                  </Text>
+                </View>
+              ) : null}
             </View>
-            {inCart ? (
-              <View style={styles.stepper}>
-                <Pressable
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    cartStore.decrement(item.id);
-                  }}
-                  style={styles.stepBtn}
-                >
-                  <Ionicons name="remove" size={12} color={colors.brand} />
-                </Pressable>
-                <Text style={styles.stepQty}>{inCart.quantity}</Text>
-                <Pressable
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    cartStore.increment(item.id);
-                  }}
-                  style={styles.stepBtn}
-                >
-                  <Ionicons name="add" size={12} color={colors.brand} />
-                </Pressable>
+            <View style={styles.rowBottom}>
+              <View>
+                {item.old_price && item.old_price > item.price && (
+                  <Text style={styles.rowOldPrice}>₹{item.old_price.toFixed(0)}</Text>
+                )}
+                <Text style={styles.rowPrice}>₹{item.price.toFixed(0)}</Text>
               </View>
-            ) : (
-              <Pressable
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  cartStore.add(item);
-                }}
-                style={styles.addBtn}
-              >
-                <Text style={styles.addBtnText}>ADD</Text>
-                <Ionicons name="add" size={10} color={colors.brand} />
-              </Pressable>
-            )}
+              {inCart ? (
+                <View style={styles.stepper}>
+                  <Pressable
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      cartStore.decrement(item.id);
+                    }}
+                    style={styles.stepBtn}
+                  >
+                    <Ionicons name="remove" size={12} color={colors.brand} />
+                  </Pressable>
+                  <Text style={styles.stepQty}>{inCart.quantity}</Text>
+                  <Pressable
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      cartStore.increment(item.id);
+                    }}
+                    style={styles.stepBtn}
+                  >
+                    <Ionicons name="add" size={12} color={colors.brand} />
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable style={styles.quickAddBtn} onPress={() => handleQuickOrder(item)}>
+                  <Ionicons name="add-circle" size={20} color={colors.brand} />
+                </Pressable>
+              )}
+            </View>
           </View>
-        </View>
-      </View>
-    );
-  };
+        </Pressable>
+      );
+    },
+    [cart, cartStore, handleQuickOrder],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.hello}>Place your order</Text>
-          <Text style={styles.headerSub}>{items.length} items available</Text>
+          <Text style={styles.hello}>Order Now</Text>
+          <Text style={styles.headerSub}>{items.length} items · tap to add</Text>
         </View>
         <Pressable
-          onPress={handleLogout}
-          style={styles.switchBtn}
+          onPress={() => router.push('/krfoodcourt/guest/orders' as any)}
+          style={styles.actionBtn}
         >
-          <Ionicons name="log-out" size={14} color={colors.brand} />
+          <Ionicons name="document-text" size={16} color={colors.brand} />
+        </Pressable>
+        <Pressable
+          onPress={handleLogout}
+          style={styles.actionBtn}
+        >
+          <Ionicons name="log-out" size={16} color={colors.brand} />
         </Pressable>
       </View>
 
@@ -408,33 +405,33 @@ export default function GuestMenu() {
         </View>
       )}
 
-      <Modal
-        visible={enlargedImage !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEnlargedImage(null)}
-      >
-        <Pressable
-          style={styles.imageModalBackdrop}
-          onPress={() => setEnlargedImage(null)}
+      {enlargedImage && (
+        <Modal
+          visible={enlargedImage !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setEnlargedImage(null)}
         >
-          <View style={styles.imageModalContent}>
-            {enlargedImage && (
+          <Pressable
+            style={styles.imageModalBackdrop}
+            onPress={() => setEnlargedImage(null)}
+          >
+            <View style={styles.imageModalContent}>
               <Image
                 source={{ uri: enlargedImage }}
                 style={styles.enlargedImage}
                 contentFit="contain"
               />
-            )}
-            <Pressable
-              style={styles.enlargedImageCloseBtn}
-              onPress={() => setEnlargedImage(null)}
-            >
-              <Ionicons name="close" size={20} color={colors.onBrandPrimary} />
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
+              <Pressable
+                style={styles.enlargedImageCloseBtn}
+                onPress={() => setEnlargedImage(null)}
+              >
+                <Ionicons name="close" size={20} color={colors.onBrandPrimary} />
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
 
       <Modal
         visible={cartOpen}
@@ -560,9 +557,9 @@ const styles = StyleSheet.create({
   },
   hello: { fontSize: type.xxl, fontWeight: '800', color: colors.onSurface, letterSpacing: -0.5 },
   headerSub: { color: colors.muted, marginTop: 2, fontSize: type.sm },
-  switchBtn: {
-    width: 30,
-    height: 30,
+  actionBtn: {
+    width: 36,
+    height: 36,
     borderRadius: radius.pill,
     backgroundColor: colors.brandTertiary,
     alignItems: 'center',
@@ -616,12 +613,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.surfaceSecondary,
-    padding: spacing.sm,
+    padding: spacing.md,
     borderRadius: radius.md,
     marginBottom: spacing.sm,
     ...shadow.soft,
   },
-  rowImage: { width: thumb.md, height: thumb.md, borderRadius: radius.sm, backgroundColor: colors.surfaceTertiary },
   rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   rowName: { flex: 1, fontSize: type.base, fontWeight: '700', color: colors.onSurface },
   tagPill: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 5, paddingVertical: 2, borderRadius: radius.sm },
@@ -629,8 +625,7 @@ const styles = StyleSheet.create({
   rowBottom: { marginTop: spacing.xs, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rowPrice: { fontSize: type.lg, fontWeight: '800', color: colors.onSurface },
   rowOldPrice: { fontSize: type.sm, color: colors.muted, textDecorationLine: 'line-through', marginBottom: 2 },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, borderWidth: 1, borderColor: colors.brand, paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radius.sm },
-  addBtnText: { color: colors.brand, fontWeight: '800', fontSize: type.sm, letterSpacing: 0.5 },
+  quickAddBtn: { padding: spacing.xs },
   stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.brand, borderRadius: radius.sm, overflow: 'hidden' },
   stepBtn: { paddingHorizontal: spacing.sm, paddingVertical: 3 },
   stepQty: { minWidth: 16, textAlign: 'center', color: colors.brand, fontWeight: '800', fontSize: type.base },
