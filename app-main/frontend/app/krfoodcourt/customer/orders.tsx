@@ -12,34 +12,29 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import { api, Order } from '@/src/api';
 import { cartStore } from '@/src/cart';
 import { colors, radius, spacing, type, shadow } from '@/src/theme';
 
-export default function customerOrders() {
+const timeAgo = (iso: string) => {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return `${Math.round(diff)}s ago`;
+  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
+  return `${Math.round(diff / 86400)}d ago`;
+};
+
+export default function CustomerOrders() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [customerId, setcustomerId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const id = await SecureStore.getItemAsync('customerId');
-      if (!id) {
-        router.replace('/krfoodcourt' as any);
-        return;
-      }
-      setcustomerId(id);
-
-      // Fetch all orders and filter to only those created by this customer (rough approximation)
-      // In a real app, you'd have a /api/orders/{customerId} endpoint
       const allOrders = await api.listOrders();
-      // Since we don't have customer tracking, show all orders (simplified for now)
-      // TODO: Backend should track customerId in Order model
       setOrders(allOrders);
     } catch (e: any) {
       console.warn('Orders load failed', e?.message);
@@ -47,7 +42,7 @@ export default function customerOrders() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [router]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -85,8 +80,7 @@ export default function customerOrders() {
     }
   };
 
-  const handleLogout = async () => {
-    await SecureStore.deleteItemAsync('customerId');
+  const handleLogout = () => {
     cartStore.clear();
     router.replace('/krfoodcourt' as any);
   };
@@ -97,7 +91,7 @@ export default function customerOrders() {
         <View>
           <Text style={styles.orderNumber}># {item.token_number}</Text>
           <Text style={styles.orderTime}>
-            {new Date(item.created_at).toLocaleTimeString()}
+            {timeAgo(item.created_at)}
           </Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusColor(item.status) + '22' }]}>
