@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+﻿from fastapi import FastAPI, APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -590,7 +590,7 @@ async def rzp_checkout_page(intent_id: str):
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ServeSync · Pay</title>
+  <title>ServeSync Â· Pay</title>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
     body {{
@@ -635,7 +635,7 @@ async def rzp_checkout_page(intent_id: str):
   <div class="card">
     <h1>ServeSync</h1>
     <p>Complete your payment to place the order.</p>
-    <div class="total">₹{intent['amount_paise']/100:.0f}</div>
+    <div class="total">â‚¹{intent['amount_paise']/100:.0f}</div>
     <button id="pay">Pay with UPI / Card</button>
     <div class="status" id="status"></div>
   </div>
@@ -733,7 +733,7 @@ async def daily_report(
 
         headers = [
             "Token #", "Order ID", "Time (IST)", "Table", "Items", "Item Count",
-            "Total (₹)", "Payment Status", "Order Status", "Payment ID", "Notes",
+            "Total (â‚¹)", "Payment Status", "Order Status", "Payment ID", "Notes",
         ]
         ws.append(headers)
 
@@ -801,9 +801,9 @@ async def daily_report(
         date_range = f"{start_date.isoformat()} to {end_date.isoformat()}" if from_date or to_date else start_date.isoformat()
         ws.append(["Summary", date_range])
         ws.append(["Total orders", len(orders)])
-        ws.append(["Total revenue (₹)", round(total_revenue_all, 2)])
-        ws.append(["Paid revenue (₹)", round(total_revenue_paid, 2)])
-        ws.append(["Unpaid revenue (₹)", round(total_revenue_all - total_revenue_paid, 2)])
+        ws.append(["Total revenue (â‚¹)", round(total_revenue_all, 2)])
+        ws.append(["Paid revenue (â‚¹)", round(total_revenue_paid, 2)])
+        ws.append(["Unpaid revenue (â‚¹)", round(total_revenue_all - total_revenue_paid, 2)])
 
         widths = [10, 30, 26, 8, 60, 12, 12, 16, 14, 26, 30]
         for i, w in enumerate(widths, start=1):
@@ -897,6 +897,8 @@ app.include_router(api_router)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+
 
 
 
