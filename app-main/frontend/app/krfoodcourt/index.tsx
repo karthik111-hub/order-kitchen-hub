@@ -53,6 +53,14 @@ const OPTIONS: RoleOption[] = [
   },
 ];
 
+const CUSTOMER_OPTION = {
+  title: 'Customer',
+  sub: 'Place your own order',
+  icon: 'person-outline' as keyof typeof Ionicons.glyphMap,
+  image:
+    'https://images.unsplash.com/photo-1495521821757-a1efb6729352?auto=format&fit=crop&w=1200&q=80',
+};
+
 export default function RoleSelect() {
   const router = useRouter();
   const [selected, setSelected] = useState<RoleOption | null>(null);
@@ -99,6 +107,19 @@ export default function RoleSelect() {
     }
   };
 
+  const submitCustomer = () => {
+    // customer/index.tsx creates (or reuses) the customer id itself via
+    // localStorage under 'serveSync_customerId' the moment it mounts, so
+    // there's nothing to set up here - just navigate. (This used to call
+    // SecureStore.setItemAsync, but expo-secure-store isn't backed by
+    // localStorage on web and throws there, which is what's actually
+    // deployed on Railway - the tap silently did nothing because the
+    // failure was only surfaced in an error banner that lives inside the
+    // password modal, which never opens for the Customer card.)
+    Haptics.selectionAsync();
+    router.push('/krfoodcourt/customer' as any);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -137,6 +158,29 @@ export default function RoleSelect() {
             </ImageBackground>
           </Pressable>
         ))}
+        <Pressable
+          testID="role-customer-card"
+          onPress={submitCustomer}
+          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+        >
+          <ImageBackground
+            source={CUSTOMER_OPTION.image}
+            style={styles.cardImage}
+            imageStyle={styles.cardImageInner}
+          >
+            <View style={styles.overlay} />
+            <View style={styles.cardContent}>
+              <View style={styles.iconPill}>
+                <Ionicons name={CUSTOMER_OPTION.icon} size={14} color={colors.onBrandPrimary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>{CUSTOMER_OPTION.title}</Text>
+                <Text style={styles.cardSub}>{CUSTOMER_OPTION.sub}</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color={colors.onBrandPrimary} />
+            </View>
+          </ImageBackground>
+        </Pressable>
       </View>
 
       <View style={styles.footer}>

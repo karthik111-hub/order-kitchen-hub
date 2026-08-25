@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+﻿from fastapi import FastAPI, APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -161,6 +161,8 @@ class Order(BaseModel):
     payment: Optional[Dict[str, Any]] = None
     table_number: Optional[str] = None
     notes: Optional[str] = None
+    chef_notes: Optional[str] = None
+    customer_id: Optional[str] = None
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -169,10 +171,17 @@ class OrderCreate(BaseModel):
     items: List[OrderItem]
     table_number: Optional[str] = None
     notes: Optional[str] = None
+    customer_id: Optional[str] = None
 
 
 class OrderStatusUpdate(BaseModel):
     status: Literal["pending", "preparing", "completed", "cancelled"]
+    # Optional extras a chef can attach when moving an order along (e.g.
+    # pending -> preparing): a remark for the kitchen, and/or a corrected/
+    # added table number. Omitted (None) means "leave as-is" - only fields
+    # explicitly present in the request body overwrite existing values.
+    chef_notes: Optional[str] = None
+    table_number: Optional[str] = None
 
 
 class AuthRequest(BaseModel):
@@ -386,6 +395,7 @@ async def create_order(payload: OrderCreate):
             table_number=payload.table_number,
             notes=payload.notes,
             payment_status="unpaid",
+            customer_id=payload.customer_id,
         )
         await db.orders.insert_one(order.dict())
         return order
@@ -394,12 +404,32 @@ async def create_order(payload: OrderCreate):
         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
 
 
+@api_router.get("/orders/customer/{customer_id}", response_model=List[Order])
+async def list_customer_orders(customer_id: str):
+    try:
+        query = {"customer_id": customer_id}
+        orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
+        logger.info(f"Found {len(orders)} orders for customer {customer_id}")
+        return [Order(**o) for o in orders]
+    except Exception as e:
+        logger.error(f"Error listing customer orders: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error listing customer orders: {str(e)}")
+
+
 @api_router.patch("/orders/{order_id}/status", response_model=Order)
 async def update_order_status(order_id: str, payload: OrderStatusUpdate):
     updated_at = now_iso()
+    update_fields: Dict[str, Any] = {"status": payload.status, "updated_at": updated_at}
+    # Only touch chef_notes/table_number if the chef actually sent something
+    # for them - omitting a field must leave the existing value alone, not
+    # blank it out on every status change.
+    if payload.chef_notes is not None:
+        update_fields["chef_notes"] = payload.chef_notes
+    if payload.table_number is not None:
+        update_fields["table_number"] = payload.table_number
     result = await db.orders.find_one_and_update(
         {"id": order_id},
-        {"$set": {"status": payload.status, "updated_at": updated_at}},
+        {"$set": update_fields},
         return_document=True,
         projection={"_id": 0},
     )
@@ -481,6 +511,7 @@ async def rzp_create_intent(payload: OrderCreate):
         "items": [i.dict() for i in payload.items],
         "table_number": payload.table_number,
         "notes": payload.notes,
+        "customer_id": payload.customer_id,
         "status": "pending",
         "created_order_id": None,
         "created_at": now_iso(),
@@ -542,6 +573,7 @@ async def rzp_finalize(intent_id: str, payload: FinalizePayload):
         table_number=intent.get("table_number"),
         notes=intent.get("notes"),
         payment_status="paid",
+        customer_id=intent.get("customer_id"),
         payment={
             "provider": "razorpay",
             "razorpay_order_id": intent["razorpay_order_id"],
@@ -578,7 +610,7 @@ async def rzp_checkout_page(intent_id: str):
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ServeSync · Pay</title>
+  <title>ServeSync Â· Pay</title>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
     body {{
@@ -623,7 +655,7 @@ async def rzp_checkout_page(intent_id: str):
   <div class="card">
     <h1>ServeSync</h1>
     <p>Complete your payment to place the order.</p>
-    <div class="total">₹{intent['amount_paise']/100:.0f}</div>
+    <div class="total">â‚¹{intent['amount_paise']/100:.0f}</div>
     <button id="pay">Pay with UPI / Card</button>
     <div class="status" id="status"></div>
   </div>
@@ -721,7 +753,7 @@ async def daily_report(
 
         headers = [
             "Token #", "Order ID", "Time (IST)", "Table", "Items", "Item Count",
-            "Total (₹)", "Payment Status", "Order Status", "Payment ID", "Notes",
+            "Total (â‚¹)", "Payment Status", "Order Status", "Payment ID", "Notes",
         ]
         ws.append(headers)
 
@@ -789,9 +821,9 @@ async def daily_report(
         date_range = f"{start_date.isoformat()} to {end_date.isoformat()}" if from_date or to_date else start_date.isoformat()
         ws.append(["Summary", date_range])
         ws.append(["Total orders", len(orders)])
-        ws.append(["Total revenue (₹)", round(total_revenue_all, 2)])
-        ws.append(["Paid revenue (₹)", round(total_revenue_paid, 2)])
-        ws.append(["Unpaid revenue (₹)", round(total_revenue_all - total_revenue_paid, 2)])
+        ws.append(["Total revenue (â‚¹)", round(total_revenue_all, 2)])
+        ws.append(["Paid revenue (â‚¹)", round(total_revenue_paid, 2)])
+        ws.append(["Unpaid revenue (â‚¹)", round(total_revenue_all - total_revenue_paid, 2)])
 
         widths = [10, 30, 26, 8, 60, 12, 12, 16, 14, 26, 30]
         for i, w in enumerate(widths, start=1):
@@ -885,3 +917,13 @@ app.include_router(api_router)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+
+
+
+
+
+
+
+
+

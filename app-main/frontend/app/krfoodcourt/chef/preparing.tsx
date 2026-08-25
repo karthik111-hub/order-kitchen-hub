@@ -293,6 +293,12 @@ export default function ChefPreparing() {
                     <Text style={styles.notesText}>{order.notes}</Text>
                   </View>
                 )}
+                {order.chef_notes && (
+                  <View style={styles.notesSection}>
+                    <Text style={styles.notesLabel}>Chef remarks:</Text>
+                    <Text style={styles.notesText}>{order.chef_notes}</Text>
+                  </View>
+                )}
 
                 {/* Action Button */}
                 <Pressable

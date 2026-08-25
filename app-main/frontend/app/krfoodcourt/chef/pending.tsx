@@ -7,6 +7,10 @@ import {
   ActivityIndicator,
   Pressable,
   RefreshControl,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,6 +75,10 @@ export default function ChefPending() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [prepareOrder, setPrepareOrder] = useState<Order | null>(null);
+  const [chefNotesInput, setChefNotesInput] = useState('');
+  const [tableNumberInput, setTableNumberInput] = useState('');
+  const [submittingPrepare, setSubmittingPrepare] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -100,12 +108,49 @@ export default function ChefPending() {
 
   const matrix = useMemo(() => buildMatrix(orders), [orders]);
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
+  const handleStatusChange = async (
+    orderId: string,
+    newStatus: string,
+    extra?: { chef_notes?: string; table_number?: string },
+  ) => {
     try {
-      await api.updateStatus(orderId, newStatus as any);
+      await api.updateStatus(orderId, newStatus as any, extra);
       load();
     } catch (e) {
       console.warn(e);
+    }
+  };
+
+  const openPrepareModal = (order: Order) => {
+    setPrepareOrder(order);
+    setChefNotesInput(order.chef_notes ?? '');
+    setTableNumberInput(order.table_number ?? '');
+  };
+
+  const closePrepareModal = () => {
+    if (submittingPrepare) return;
+    setPrepareOrder(null);
+    setChefNotesInput('');
+    setTableNumberInput('');
+  };
+
+  const confirmStartPreparing = async () => {
+    if (!prepareOrder) return;
+    try {
+      setSubmittingPrepare(true);
+      await handleStatusChange(prepareOrder.id, 'preparing', {
+        // Send trimmed values through; an empty string still explicitly
+        // clears/sets the field (vs. omitting the key, which leaves it
+        // untouched) - that's the intended behavior here since the chef is
+        // actively editing both fields in this dialog.
+        chef_notes: chefNotesInput.trim(),
+        table_number: tableNumberInput.trim(),
+      });
+      setPrepareOrder(null);
+      setChefNotesInput('');
+      setTableNumberInput('');
+    } finally {
+      setSubmittingPrepare(false);
     }
   };
 
@@ -296,11 +341,17 @@ export default function ChefPending() {
                     <Text style={styles.notesText}>{order.notes}</Text>
                   </View>
                 )}
+                {order.chef_notes && (
+                  <View style={styles.notesSection}>
+                    <Text style={styles.notesLabel}>Chef remarks:</Text>
+                    <Text style={styles.notesText}>{order.chef_notes}</Text>
+                  </View>
+                )}
 
                 {/* Action Button */}
                 <Pressable
                   style={styles.actionButton}
-                  onPress={() => handleStatusChange(order.id, 'preparing')}
+                  onPress={() => openPrepareModal(order)}
                 >
                   <Ionicons name="flame" size={16} color="white" />
                   <Text style={styles.actionButtonText}>Start Preparing</Text>
@@ -310,6 +361,70 @@ export default function ChefPending() {
           </View>
         </ScrollView>
       )}
+
+      <Modal
+        visible={prepareOrder !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={closePrepareModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalRoot}
+        >
+          <Pressable style={styles.backdrop} onPress={closePrepareModal} />
+          <View style={styles.sheet}>
+            <View style={styles.handle} />
+            <Text style={styles.sheetTitle}>
+              Start preparing {prepareOrder ? `#${prepareOrder.token_number}` : ''}
+            </Text>
+            <Text style={styles.sheetSub}>
+              Add a remark or table number for the kitchen before sending this to preparing.
+            </Text>
+
+            <Text style={styles.fieldLabel}>Table number</Text>
+            <TextInput
+              testID="prepare-table-number-input"
+              placeholder="e.g. 12"
+              placeholderTextColor={colors.muted}
+              value={tableNumberInput}
+              onChangeText={setTableNumberInput}
+              style={styles.input}
+            />
+
+            <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>Remarks</Text>
+            <TextInput
+              testID="prepare-chef-notes-input"
+              placeholder="e.g. Less spicy, no onions"
+              placeholderTextColor={colors.muted}
+              value={chefNotesInput}
+              onChangeText={setChefNotesInput}
+              multiline
+              numberOfLines={3}
+              style={[styles.input, styles.textArea]}
+            />
+
+            <Pressable
+              testID="prepare-confirm-btn"
+              onPress={confirmStartPreparing}
+              disabled={submittingPrepare}
+              style={[styles.submitBtn, submittingPrepare && { opacity: 0.6 }]}
+            >
+              {submittingPrepare ? (
+                <ActivityIndicator color={colors.onBrandPrimary} />
+              ) : (
+                <>
+                  <Ionicons name="flame" size={16} color={colors.onBrandPrimary} />
+                  <Text style={styles.submitBtnText}>Start Preparing</Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable onPress={closePrepareModal} style={styles.cancelBtn} disabled={submittingPrepare}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -541,4 +656,59 @@ const styles = StyleSheet.create({
     fontSize: type.base,
     fontWeight: '700',
   },
+
+  modalRoot: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
+  sheet: {
+    backgroundColor: colors.surfaceSecondary,
+    padding: spacing.lg,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    paddingBottom: spacing.xl,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 30,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.borderStrong,
+    marginBottom: spacing.md,
+  },
+  sheetTitle: { fontSize: type.xl, fontWeight: '800', color: colors.onSurface },
+  sheetSub: {
+    fontSize: type.sm,
+    color: colors.onSurfaceTertiary,
+    marginTop: 4,
+    marginBottom: spacing.md,
+  },
+  fieldLabel: {
+    fontSize: type.sm,
+    fontWeight: '700',
+    color: colors.onSurfaceTertiary,
+    marginBottom: 4,
+  },
+  input: {
+    backgroundColor: colors.surfaceTertiary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    color: colors.onSurface,
+    fontSize: type.base,
+  },
+  textArea: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  submitBtn: {
+    marginTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.warning,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+  },
+  submitBtnText: { color: colors.onBrandPrimary, fontWeight: '800', fontSize: type.lg },
+  cancelBtn: { alignItems: 'center', marginTop: spacing.sm, paddingVertical: spacing.sm },
+  cancelBtnText: { color: colors.muted, fontWeight: '600', fontSize: type.base },
 });
