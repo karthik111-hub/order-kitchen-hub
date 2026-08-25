@@ -51,14 +51,6 @@ export default function LandingPage() {
 
       {/* Content Overlay */}
       <View style={styles.content}>
-        {/* Header - takes up center space */}
-        <View style={styles.header}>
-          <Text style={styles.brandTitle}>ServeSync</Text>
-          <Text style={styles.brandSubtitle}>
-            Personalized order and kitchen management system
-          </Text>
-        </View>
-
         {/* Bottom Section - Buttons + Footer */}
         <View style={styles.bottomSection}>
           {/* Button Container - Side by side */}
@@ -154,31 +146,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingHorizontal: spacing.xl,
-    paddingTop: 60,
     paddingBottom: 40,
     zIndex: 10,
   },
-  header: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-  },
-  brandTitle: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: colors.onBrandPrimary,
-    letterSpacing: -1,
-    marginBottom: spacing.sm,
-  },
-  brandSubtitle: {
-    fontSize: type.base,
-    color: colors.onBrandPrimary,
-    opacity: 0.9,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+
   bottomSection: {
     gap: spacing.lg,
   },
