@@ -161,6 +161,7 @@ class Order(BaseModel):
     payment: Optional[Dict[str, Any]] = None
     table_number: Optional[str] = None
     notes: Optional[str] = None
+    customer_id: Optional[str] = None
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -169,6 +170,7 @@ class OrderCreate(BaseModel):
     items: List[OrderItem]
     table_number: Optional[str] = None
     notes: Optional[str] = None
+    customer_id: Optional[str] = None
 
 
 class OrderStatusUpdate(BaseModel):
@@ -386,6 +388,7 @@ async def create_order(payload: OrderCreate):
             table_number=payload.table_number,
             notes=payload.notes,
             payment_status="unpaid",
+            customer_id=payload.customer_id,
         )
         await db.orders.insert_one(order.dict())
         return order
@@ -493,6 +496,7 @@ async def rzp_create_intent(payload: OrderCreate):
         "items": [i.dict() for i in payload.items],
         "table_number": payload.table_number,
         "notes": payload.notes,
+        "customer_id": payload.customer_id,
         "status": "pending",
         "created_order_id": None,
         "created_at": now_iso(),
@@ -554,6 +558,7 @@ async def rzp_finalize(intent_id: str, payload: FinalizePayload):
         table_number=intent.get("table_number"),
         notes=intent.get("notes"),
         payment_status="paid",
+        customer_id=intent.get("customer_id"),
         payment={
             "provider": "razorpay",
             "razorpay_order_id": intent["razorpay_order_id"],

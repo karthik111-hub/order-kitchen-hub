@@ -67,6 +67,7 @@ export default function CustomerMenu() {
   const [pendingIntentId, setPendingIntentId] = useState<string | null>(null);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [customerId] = useState(() => getOrCreateCustomerId());
+  const [successOrder, setSuccessOrder] = useState<{ token_number: number; order_number: string } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -115,7 +116,22 @@ export default function CustomerMenu() {
           setTableNumber('');
           setNotes('');
           setCartOpen(false);
-          router.push('/krfoodcourt/customer/orders' as any);
+          if (it.created_order_id) {
+            try {
+              const order = await api.listCustomerOrders(customerId).then(
+                orders => orders.find(o => o.id === it.created_order_id) ?? null,
+              );
+              if (order) {
+                setSuccessOrder({ token_number: order.token_number, order_number: order.order_number });
+              } else {
+                router.push('/krfoodcourt/customer/orders' as any);
+              }
+            } catch {
+              router.push('/krfoodcourt/customer/orders' as any);
+            }
+          } else {
+            router.push('/krfoodcourt/customer/orders' as any);
+          }
         } else if (it.status === 'failed') {
           if (pollRef.current) clearInterval(pollRef.current);
           setPendingIntentId(null);
@@ -126,7 +142,7 @@ export default function CustomerMenu() {
         /* ignore transient errors */
       }
     },
-    [router],
+    [router, customerId],
   );
 
   useEffect(() => {
@@ -177,7 +193,7 @@ export default function CustomerMenu() {
       setPlacing(true);
       // Send customerId to backend so order is tagged with customer
       console.log('Placing order with customerId:', customerId);
-      await api.createOrder({
+      const order = await api.createOrder({
         items: lines,
         table_number: tableNumber || undefined,
         notes: notes || undefined,
@@ -188,7 +204,7 @@ export default function CustomerMenu() {
       setTableNumber('');
       setNotes('');
       setCartOpen(false);
-      router.push('/krfoodcourt/customer/orders' as any);
+      setSuccessOrder({ token_number: order.token_number, order_number: order.order_number });
     } catch (e: any) {
       Alert.alert('Failed to place order', e?.message ?? 'Try again');
     } finally {
@@ -581,6 +597,49 @@ export default function CustomerMenu() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal
+        visible={successOrder !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSuccessOrder(null)}
+      >
+        <View style={styles.successBackdrop}>
+          <View style={styles.successCard}>
+            <View style={styles.successIconWrap}>
+              <Ionicons name="checkmark-circle" size={56} color={colors.success} />
+            </View>
+            <Text style={styles.successTitle}>Order placed!</Text>
+            {successOrder && (
+              <Text style={styles.successSubtitle}>
+                Token #{successOrder.token_number} · Order {successOrder.order_number}
+              </Text>
+            )}
+            <Text style={styles.successBody}>
+              Your order has been sent to the kitchen. You can track its status any time in{' '}
+              My Order.
+            </Text>
+            <Pressable
+              testID="success-view-order-btn"
+              style={styles.successPrimaryBtn}
+              onPress={() => {
+                setSuccessOrder(null);
+                router.push('/krfoodcourt/customer/orders' as any);
+              }}
+            >
+              <Text style={styles.successPrimaryBtnText}>View My Order</Text>
+              <Ionicons name="arrow-forward" size={14} color={colors.onBrandPrimary} />
+            </Pressable>
+            <Pressable
+              testID="success-keep-browsing-btn"
+              style={styles.successSecondaryBtn}
+              onPress={() => setSuccessOrder(null)}
+            >
+              <Text style={styles.successSecondaryBtnText}>Keep browsing</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -900,5 +959,74 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  successBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  successCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    ...shadow.soft,
+  },
+  successIconWrap: {
+    marginBottom: spacing.sm,
+  },
+  successTitle: {
+    fontSize: type.xl,
+    fontWeight: '800',
+    color: colors.onSurface,
+    textAlign: 'center',
+  },
+  successSubtitle: {
+    marginTop: 4,
+    fontSize: type.base,
+    fontWeight: '700',
+    color: colors.brand,
+    textAlign: 'center',
+  },
+  successBody: {
+    marginTop: spacing.sm,
+    fontSize: type.sm,
+    color: colors.muted,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  successPrimaryBtn: {
+    marginTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.brand,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    width: '100%',
+  },
+  successPrimaryBtnText: {
+    color: colors.onBrandPrimary,
+    fontWeight: '800',
+    fontSize: type.base,
+  },
+  successSecondaryBtn: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  successSecondaryBtnText: {
+    color: colors.muted,
+    fontWeight: '700',
+    fontSize: type.sm,
   },
 });

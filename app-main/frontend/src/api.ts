@@ -67,6 +67,7 @@ export type PaymentStatus = 'unpaid' | 'paid';
 export type Order = {
   id: string;
   token_number: number;
+  order_number: string;
   items: OrderItem[];
   total: number;
   status: OrderStatus;
@@ -74,6 +75,7 @@ export type Order = {
   payment?: Record<string, any> | null;
   table_number?: string | null;
   notes?: string | null;
+  customer_id?: string | null;
   created_at: string;
   updated_at: string;
 };
