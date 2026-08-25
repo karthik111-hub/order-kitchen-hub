@@ -164,7 +164,7 @@ export default function RoleSelect() {
           style={({ pressed }) => [styles.card, pressed && styles.pressed]}
         >
           <ImageBackground
-            source={{ uri: CUSTOMER_OPTION.image }}
+            source={CUSTOMER_OPTION.image}
             style={styles.cardImage}
             imageStyle={styles.cardImageInner}
           >
