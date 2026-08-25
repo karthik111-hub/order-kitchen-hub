@@ -14,56 +14,34 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { api, Order } from '@/src/api';
 import { colors, radius, spacing, type, shadow } from '@/src/theme';
 
-const ITEM_COL_WIDTH = 130;
-const ORDER_COL_WIDTH = 78;
-const TOTAL_COL_WIDTH = 68;
-const ROW_HEIGHT = 40;
-
-const shortId = (id: string) => id.split('-').pop() || id.slice(0, 8);
-
-const formatTimeIST = (utcTime: string) => {
-  try {
-    const date = new Date(utcTime);
-    const formatter = new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-    });
-    return formatter.format(date);
-  } catch (e) {
-    return '';
-  }
+type ItemSummaryRow = {
+  name: string;
+  quantity: number;
+  revenue: number;
 };
 
-type Matrix = {
-  orders: Order[];
-  itemNames: string[];
-  cells: Record<string, Record<string, number>>;
-  totals: Record<string, number>;
-  grandTotal: number;
+type Summary = {
+  totalOrders: number;
+  totalItems: number;
+  totalRevenue: number;
+  rows: ItemSummaryRow[];
 };
 
-const buildMatrix = (orders: Order[]): Matrix => {
-  const cells: Record<string, Record<string, number>> = {};
-  const totals: Record<string, number> = {};
-  const nameSet = new Set<string>();
-  let grand = 0;
+const buildSummary = (orders: Order[]): Summary => {
+  const byName: Record<string, ItemSummaryRow> = {};
+  let totalItems = 0;
+  let totalRevenue = 0;
   for (const o of orders) {
+    totalRevenue += o.total;
     for (const li of o.items) {
-      nameSet.add(li.name);
-      if (!cells[li.name]) cells[li.name] = {};
-      cells[li.name][o.id] = (cells[li.name][o.id] || 0) + li.quantity;
-      totals[li.name] = (totals[li.name] || 0) + li.quantity;
-      grand += li.quantity;
+      if (!byName[li.name]) byName[li.name] = { name: li.name, quantity: 0, revenue: 0 };
+      byName[li.name].quantity += li.quantity;
+      byName[li.name].revenue += li.price * li.quantity;
+      totalItems += li.quantity;
     }
   }
-  const itemNames = Array.from(nameSet).sort();
-  return { orders, itemNames, cells, totals, grandTotal: grand };
+  const rows = Object.values(byName).sort((a, b) => b.quantity - a.quantity || a.name.localeCompare(b.name));
+  return { totalOrders: orders.length, totalItems, totalRevenue, rows };
 };
 
 export default function ChefCompleted() {
@@ -75,9 +53,7 @@ export default function ChefCompleted() {
   const load = useCallback(async () => {
     try {
       const data = await api.listOrders('completed');
-      setOrders(data.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ));
+      setOrders(data);
     } catch (e) {
       console.warn(e);
     } finally {
@@ -89,7 +65,7 @@ export default function ChefCompleted() {
   useFocusEffect(
     useCallback(() => {
       load();
-        const id = setInterval(load, 1500);
+      const id = setInterval(load, 4000);
       return () => clearInterval(id);
     }, [load]),
   );
@@ -98,7 +74,7 @@ export default function ChefCompleted() {
     load();
   }, [load]);
 
-  const matrix = useMemo(() => buildMatrix(orders), [orders]);
+  const summary = useMemo(() => buildSummary(orders), [orders]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -120,7 +96,7 @@ export default function ChefCompleted() {
         <View style={styles.center}>
           <ActivityIndicator color={colors.brand} />
         </View>
-      ) : matrix.itemNames.length === 0 ? (
+      ) : orders.length === 0 ? (
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
             <Ionicons name="checkmark-done-outline" size={26} color={colors.brand} />
@@ -143,165 +119,80 @@ export default function ChefCompleted() {
             />
           }
         >
-          {/* Board Matrix Section */}
+          {/* Summary stat cards */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Board Matrix</Text>
-            <View style={styles.legendRow}>
-              <View style={[styles.legendPill, { backgroundColor: '#E8F5E9' }]}>
-                <View style={[styles.dot, { backgroundColor: colors.success }]} />
-                <Text style={styles.legendText}>Completed</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statCard} testID="completed-stat-orders">
+                <Text style={styles.statValue}>{summary.totalOrders}</Text>
+                <Text style={styles.statLabel}>Orders</Text>
               </View>
-              <Text style={styles.grandText}>Total items: {matrix.grandTotal}</Text>
+              <View style={styles.statCard} testID="completed-stat-items">
+                <Text style={styles.statValue}>{summary.totalItems}</Text>
+                <Text style={styles.statLabel}>Items</Text>
+              </View>
+              <View style={styles.statCard} testID="completed-stat-revenue">
+                <Text style={styles.statValue}>₹{summary.totalRevenue.toFixed(0)}</Text>
+                <Text style={styles.statLabel}>Revenue</Text>
+              </View>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator
-              contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}
-            >
-              <View testID="completed-matrix">
-                {/* Header row */}
-                <View style={styles.headerRow}>
-                  <View style={[styles.headerCell, { width: ITEM_COL_WIDTH }]}>
-                    <Text style={styles.headerCellText}>Item</Text>
-                  </View>
-                  {matrix.orders.map(o => (
-                    <View
-                      key={o.id}
-                      style={[
-                        styles.headerCell,
-                        {
-                          width: ORDER_COL_WIDTH,
-                          backgroundColor: '#E8F5E9',
-                        },
-                      ]}
-                      testID={`completed-col-${o.id}`}
-                    >
-                      <Text
-                        style={[
-                          styles.headerCellText,
-                          { color: colors.success },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        #{o.token_number}
-                      </Text>
-                      <Text style={styles.headerSubText} numberOfLines={1}>
-                        {shortId(o.id)}
-                      </Text>
-                      {o.table_number ? (
-                        <Text style={styles.headerSubText} numberOfLines={1}>
-                          T-{o.table_number}
-                        </Text>
-                      ) : null}
-                    </View>
-                  ))}
-                  <View
-                    style={[styles.headerCell, styles.totalCell, { width: TOTAL_COL_WIDTH }]}
-                  >
-                    <Text style={[styles.headerCellText, { color: colors.onBrandPrimary }]}>
-                      Total
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Item rows */}
-                <ScrollView>
-                  {matrix.itemNames.map((name, rowIdx) => (
-                    <View
-                      key={name}
-                      style={[
-                        styles.row,
-                        { backgroundColor: rowIdx % 2 === 0 ? colors.surfaceSecondary : '#FCFCFB' },
-                      ]}
-                      testID={`completed-row-${name}`}
-                    >
-                      <View style={[styles.itemCell, { width: ITEM_COL_WIDTH }]}>
-                        <Text style={styles.itemNameText} numberOfLines={2}>
-                          {name}
-                        </Text>
-                      </View>
-                      {matrix.orders.map(o => {
-                        const qty = matrix.cells[name]?.[o.id] || 0;
-                        return (
-                          <View
-                            key={o.id}
-                            style={[styles.qtyCell, { width: ORDER_COL_WIDTH }]}
-                          >
-                            {qty > 0 ? (
-                              <Text style={styles.qtyText}>{qty}</Text>
-                            ) : (
-                              <Text style={styles.dashText}>–</Text>
-                            )}
-                          </View>
-                        );
-                      })}
-                      <View style={[styles.qtyCell, styles.totalCell, { width: TOTAL_COL_WIDTH }]}>
-                        <Text style={styles.totalCellText}>{matrix.totals[name]}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            </ScrollView>
           </View>
 
-          {/* Order List Section */}
+          {/* Consolidated item breakdown */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Order Details</Text>
-            {orders.map((order) => (
-              <View key={order.id} style={styles.orderCard}>
-                <View style={styles.orderHeader}>
-                  <View style={styles.flex1}>
-                    <View style={styles.orderIdRow}>
-                      <Text style={styles.orderId}>#{order.token_number}</Text>
-                      <Text style={styles.orderNumber}>{shortId(order.id)}</Text>
-                    </View>
-                    <Text style={styles.timestamp}>{formatTimeIST(order.created_at)}</Text>
-                    {order.table_number && (
-                      <Text style={styles.tableNumber}>Table {order.table_number}</Text>
-                    )}
-                  </View>
-                  <Text style={styles.total}>₹{order.total.toFixed(2)}</Text>
-                </View>
-
-                {/* Order Items */}
-                <View style={styles.itemsList}>
-                  {order.items.map((item, idx) => (
-                    <View key={idx} style={styles.orderItem}>
-                      <Text style={styles.itemQty}>{item.quantity}×</Text>
-                      <View style={styles.flex1}>
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        <Text style={styles.itemPrice}>₹{item.price.toFixed(2)}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Order Notes */}
-                {order.notes && (
-                  <View style={styles.notesSection}>
-                    <Text style={styles.notesLabel}>Notes:</Text>
-                    <Text style={styles.notesText}>{order.notes}</Text>
-                  </View>
-                )}
-                {order.chef_notes && (
-                  <View style={styles.notesSection}>
-                    <Text style={styles.notesLabel}>Chef remarks:</Text>
-                    <Text style={styles.notesText}>{order.chef_notes}</Text>
-                  </View>
-                )}
-
-                {/* Status Badge */}
-                <View style={styles.statusBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                  <Text style={styles.statusText}>Order Complete</Text>
-                </View>
+            <Text style={styles.sectionTitle}>Items Served</Text>
+            <View style={styles.table} testID="completed-summary-table">
+              <View style={styles.tableHeaderRow}>
+                <Text style={[styles.tableHeaderText, styles.itemCol]}>Item</Text>
+                <Text style={[styles.tableHeaderText, styles.qtyCol]}>Qty</Text>
+                <Text style={[styles.tableHeaderText, styles.revenueCol]}>Revenue</Text>
               </View>
-            ))}
+              {summary.rows.map((row, idx) => (
+                <View
+                  key={row.name}
+                  style={[
+                    styles.tableRow,
+                    { backgroundColor: idx % 2 === 0 ? colors.surfaceSecondary : '#FCFCFB' },
+                  ]}
+                  testID={`completed-summary-row-${row.name}`}
+                >
+                  <Text style={[styles.tableCellText, styles.itemCol]} numberOfLines={2}>
+                    {row.name}
+                  </Text>
+                  <Text style={[styles.tableCellText, styles.qtyCol, styles.qtyValue]}>
+                    {row.quantity}
+                  </Text>
+                  <Text style={[styles.tableCellText, styles.revenueCol]}>
+                    ₹{row.revenue.toFixed(0)}
+                  </Text>
+                </View>
+              ))}
+              <View style={styles.tableFooterRow}>
+                <Text style={[styles.tableFooterText, styles.itemCol]}>Total</Text>
+                <Text style={[styles.tableFooterText, styles.qtyCol, styles.qtyValue]}>
+                  {summary.totalItems}
+                </Text>
+                <Text style={[styles.tableFooterText, styles.revenueCol]}>
+                  ₹{summary.totalRevenue.toFixed(0)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Pressable
+              testID="view-individual-orders-btn"
+              style={styles.detailsBtn}
+              onPress={() => router.push('/krfoodcourt/chef/completed-details' as any)}
+            >
+              <Ionicons name="list-outline" size={16} color={colors.brand} />
+              <Text style={styles.detailsBtnText}>View Individual Orders</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.brand} />
+            </Pressable>
           </View>
         </ScrollView>
       )}
     </SafeAreaView>
+
   );
 }
 
@@ -336,24 +227,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  legendPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  legendText: { color: colors.onSurfaceTertiary, fontSize: type.sm, fontWeight: '600' },
-  grandText: { color: colors.muted, fontSize: type.sm, fontWeight: '700', marginLeft: 'auto' },
-
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   emptyIcon: {
     width: 60,
@@ -372,160 +245,71 @@ const styles = StyleSheet.create({
     fontSize: type.sm,
   },
 
-  headerRow: {
+  statsRow: {
     flexDirection: 'row',
-    borderTopLeftRadius: radius.md,
-    borderTopRightRadius: radius.md,
+    gap: spacing.sm,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#E8F5E9',
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    ...shadow.soft,
+  },
+  statValue: {
+    fontSize: type.xxl,
+    fontWeight: '800',
+    color: colors.success,
+  },
+  statLabel: {
+    marginTop: 2,
+    fontSize: type.sm,
+    fontWeight: '700',
+    color: colors.onSurfaceTertiary,
+  },
+
+  table: {
+    borderRadius: radius.md,
     overflow: 'hidden',
     ...shadow.soft,
   },
-  headerCell: {
-    height: 48,
-    paddingHorizontal: spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: colors.divider,
-    backgroundColor: colors.surfaceTertiary,
-  },
-  headerCellText: { fontSize: type.sm, fontWeight: '800', color: colors.onSurface },
-  headerSubText: { fontSize: type.xs, color: colors.muted, marginTop: 1, fontWeight: '600' },
-
-  row: {
+  tableHeaderRow: {
     flexDirection: 'row',
+    backgroundColor: colors.surfaceTertiary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  tableHeaderText: { fontSize: type.sm, fontWeight: '800', color: colors.onSurface },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  itemCell: {
-    height: 40,
+  tableCellText: { fontSize: type.base, color: colors.onSurface, fontWeight: '600' },
+  tableFooterRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.brandTertiary,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: colors.divider,
   },
-  itemNameText: { fontSize: type.sm, fontWeight: '700', color: colors.onSurface },
-  qtyCell: {
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: colors.divider,
-  },
-  qtyText: { fontSize: type.lg, fontWeight: '800', color: colors.onSurface },
-  dashText: { fontSize: type.base, color: colors.muted },
-  totalCell: {
-    backgroundColor: colors.brand,
-  },
-  totalCellText: { color: colors.onBrandPrimary, fontSize: type.lg, fontWeight: '800' },
-
-  // Order Card Styles
-  orderCard: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.success,
-    ...shadow.soft,
-  },
-  orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  orderIdRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  orderId: {
-    fontSize: type.base,
-    fontWeight: '800',
-    color: colors.onSurface,
-  },
-  orderNumber: {
-    fontSize: type.xs,
-    fontWeight: '600',
-    color: colors.muted,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: radius.sm,
-  },
-  timestamp: {
-    fontSize: type.xs,
-    fontWeight: '600',
-    color: colors.success,
-    marginTop: 4,
-  },
-  tableNumber: {
-    fontSize: type.sm,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  total: {
-    fontSize: type.lg,
-    fontWeight: '800',
-    color: colors.success,
-  },
-  itemsList: {
-    marginBottom: spacing.md,
-  },
-  orderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  itemQty: {
-    fontSize: type.base,
-    fontWeight: '800',
-    color: colors.success,
-    marginRight: spacing.sm,
-    width: 30,
-  },
-  itemName: {
-    fontSize: type.base,
-    fontWeight: '600',
-    color: colors.onSurface,
-  },
-  itemPrice: {
-    fontSize: type.sm,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  notesSection: {
-    backgroundColor: 'rgba(0,0,0,0.02)',
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  notesLabel: {
-    fontSize: type.sm,
-    fontWeight: '700',
-    color: colors.muted,
-  },
-  notesText: {
-    fontSize: type.sm,
-    color: colors.onSurface,
-    marginTop: 4,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(52, 199, 89, 0.1)',
-    gap: spacing.sm,
-  },
-  statusText: {
-    color: colors.success,
-    fontSize: type.base,
-    fontWeight: '700',
-  },
+  tableFooterText: { fontSize: type.base, fontWeight: '800', color: colors.brand },
+  itemCol: { flex: 1 },
+  qtyCol: { width: 60, textAlign: 'right' },
+  qtyValue: { fontWeight: '800' },
+  revenueCol: { width: 90, textAlign: 'right' },
   flex1: { flex: 1 },
+  detailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.brandTertiary,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+  },
+  detailsBtnText: { color: colors.brand, fontWeight: '800', fontSize: type.base },
 });
-

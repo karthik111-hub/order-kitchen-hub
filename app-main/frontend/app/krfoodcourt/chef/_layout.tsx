@@ -78,6 +78,14 @@ export default function ChefLayout() {
           tabBarButtonTestID: 'chef-tab-completed',
         }}
       />
+      <Tabs.Screen
+        name="completed-details"
+        options={{
+          // Reachable via router.push from the Completed summary screen,
+          // but not shown as its own tab button.
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

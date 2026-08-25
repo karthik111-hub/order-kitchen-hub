@@ -65,9 +65,8 @@ export default function RootLayout() {
             }
           }
         } else if (pathname === '/') {
-          // Root path - redirect to krfoodcourt
-          router.replace("/krfoodcourt");
-          return;
+          // Root path - show landing page, don't redirect
+          // Landing page should be visible to all users
         }
       } catch (e) {
         console.error("Auth check error:", e);
