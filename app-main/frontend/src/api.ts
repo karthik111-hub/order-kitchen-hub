@@ -169,6 +169,7 @@ export const api = {
     items: OrderItem[];
     table_number?: string;
     notes?: string;
+    customer_id?: string;
   }) =>
     fetch(`${API}/orders`, {
       method: 'POST',
@@ -214,6 +215,7 @@ export const api = {
     items: OrderItem[];
     table_number?: string;
     notes?: string;
+    customer_id?: string;
   }) =>
     fetch(`${API}/razorpay/intent`, {
       method: 'POST',
@@ -237,3 +239,6 @@ export const api = {
     return `${API}/reports/daily.xlsx${q}`;
   },
 };
+
+
+

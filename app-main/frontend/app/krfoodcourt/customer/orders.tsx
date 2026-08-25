@@ -25,23 +25,31 @@ const timeAgo = (iso: string) => {
   return `${Math.round(diff / 86400)}d ago`;
 };
 
+// Helper to get persistent customerId
+const getPersistedCustomerId = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('serveSync_customerId');
+};
+
 export default function CustomerOrders() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [customerId] = useState(() => getPersistedCustomerId());
 
   const load = useCallback(async () => {
     try {
-      const customerId = 'customer-' + Date.now(); // Use consistent ID from sessionStorage or localStorage
-      // Try to get customerId from storage
-      let id = customerId;
-      if (typeof window !== 'undefined') {
-        const stored = window.sessionStorage.getItem('customerId') || window.localStorage.getItem('customerId');
-        if (stored) id = stored;
+      if (!customerId) {
+        console.warn('No customerId found');
+        setOrders([]);
+        setLoading(false);
+        return;
       }
-      const allOrders = await api.listCustomerOrders(id);
+      console.log('Loading orders for customerId:', customerId);
+      const allOrders = await api.listCustomerOrders(customerId);
+      console.log('Loaded', allOrders.length, 'orders');
       setOrders(allOrders);
     } catch (e: any) {
       console.warn('Orders load failed', e?.message);
@@ -49,7 +57,7 @@ export default function CustomerOrders() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [customerId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,6 +96,7 @@ export default function CustomerOrders() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('serveSync_customerId');
     cartStore.clear();
     router.replace('/krfoodcourt' as any);
   };
@@ -294,4 +303,3 @@ const styles = StyleSheet.create({
   },
   paidText: { fontSize: type.xs, fontWeight: '800', color: colors.success, letterSpacing: 0.3 },
 });
-

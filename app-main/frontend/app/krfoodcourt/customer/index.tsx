@@ -37,6 +37,18 @@ const tagColor = (tag: ItemTag) =>
 
 type Section = { category: string; items: MenuItem[] };
 
+// Helper to get or create persistent customerId
+const getOrCreateCustomerId = (): string => {
+  if (typeof window === 'undefined') return '';
+  
+  let id = localStorage.getItem('serveSync_customerId');
+  if (!id) {
+    id = `customer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('serveSync_customerId', id);
+  }
+  return id;
+};
+
 export default function CustomerMenu() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -54,6 +66,7 @@ export default function CustomerMenu() {
   const [paying, setPaying] = useState(false);
   const [pendingIntentId, setPendingIntentId] = useState<string | null>(null);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+  const [customerId] = useState(() => getOrCreateCustomerId());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -162,10 +175,13 @@ export default function CustomerMenu() {
     if (lines.length === 0) return;
     try {
       setPlacing(true);
+      // Send customerId to backend so order is tagged with customer
+      console.log('Placing order with customerId:', customerId);
       await api.createOrder({
         items: lines,
         table_number: tableNumber || undefined,
         notes: notes || undefined,
+        customer_id: customerId,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       cartStore.clear();
@@ -188,6 +204,7 @@ export default function CustomerMenu() {
         items: lines,
         table_number: tableNumber || undefined,
         notes: notes || undefined,
+        customer_id: customerId,
       });
       setPendingIntentId(intent.intent_id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -201,7 +218,7 @@ export default function CustomerMenu() {
   };
 
   const handleLogout = async () => {
-    await SecureStore.deleteItemAsync('customerId');
+    localStorage.removeItem('serveSync_customerId');
     cartStore.clear();
     router.replace('/krfoodcourt' as any);
   };
@@ -885,4 +902,3 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
-
