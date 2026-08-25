@@ -51,8 +51,15 @@ export default function LandingPage() {
 
       {/* Content Overlay */}
       <View style={styles.content}>
+        {/* Header - takes up center space */}
+        <View style={styles.header}>
+          <Text style={styles.brandTitle}>ServeSync</Text>
+          <Text style={styles.brandSubtitle}>
+            Personalized order and kitchen management system
+          </Text>
+        </View>
 
-        {/* Footer + Buttons Container */}
+        {/* Bottom Section - Buttons + Footer */}
         <View style={styles.bottomSection}>
           {/* Button Container - Side by side */}
           <View style={styles.buttonContainer}>
@@ -85,7 +92,7 @@ export default function LandingPage() {
               <View style={styles.buttonContent}>
                 <Text style={[styles.buttonTitle, { color: colors.brand }]}>Recent Works</Text>
                 <Text style={[styles.buttonSubtitle, { color: colors.onSurfaceTertiary }]}>
-                  KR Food Court Kitchen order management app
+                  ServeSync
                 </Text>
               </View>
             </Pressable>
@@ -188,7 +195,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
     gap: spacing.sm,
-    ...shadow.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
     flex: 1,
     maxWidth: 180,
   },
