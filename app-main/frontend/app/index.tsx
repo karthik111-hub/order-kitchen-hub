@@ -51,12 +51,6 @@ export default function LandingPage() {
 
       {/* Content Overlay */}
       <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.brandTitle}>ServeSync</Text>
-          <Text style={styles.brandSubtitle}>
-            Personalized order and kitchen management system
-          </Text>
-        </View>
 
         {/* Footer + Buttons Container */}
         <View style={styles.bottomSection}>
@@ -91,7 +85,7 @@ export default function LandingPage() {
               <View style={styles.buttonContent}>
                 <Text style={[styles.buttonTitle, { color: colors.brand }]}>Recent Works</Text>
                 <Text style={[styles.buttonSubtitle, { color: colors.onSurfaceTertiary }]}>
-                  ServeSync
+                  KR Food Court Kitchen order management app
                 </Text>
               </View>
             </Pressable>
