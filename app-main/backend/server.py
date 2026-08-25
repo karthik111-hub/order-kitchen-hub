@@ -161,6 +161,7 @@ class Order(BaseModel):
     payment: Optional[Dict[str, Any]] = None
     table_number: Optional[str] = None
     notes: Optional[str] = None
+    chef_notes: Optional[str] = None
     customer_id: Optional[str] = None
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
@@ -175,6 +176,12 @@ class OrderCreate(BaseModel):
 
 class OrderStatusUpdate(BaseModel):
     status: Literal["pending", "preparing", "completed", "cancelled"]
+    # Optional extras a chef can attach when moving an order along (e.g.
+    # pending -> preparing): a remark for the kitchen, and/or a corrected/
+    # added table number. Omitted (None) means "leave as-is" - only fields
+    # explicitly present in the request body overwrite existing values.
+    chef_notes: Optional[str] = None
+    table_number: Optional[str] = None
 
 
 class AuthRequest(BaseModel):
@@ -412,9 +419,17 @@ async def list_customer_orders(customer_id: str):
 @api_router.patch("/orders/{order_id}/status", response_model=Order)
 async def update_order_status(order_id: str, payload: OrderStatusUpdate):
     updated_at = now_iso()
+    update_fields: Dict[str, Any] = {"status": payload.status, "updated_at": updated_at}
+    # Only touch chef_notes/table_number if the chef actually sent something
+    # for them - omitting a field must leave the existing value alone, not
+    # blank it out on every status change.
+    if payload.chef_notes is not None:
+        update_fields["chef_notes"] = payload.chef_notes
+    if payload.table_number is not None:
+        update_fields["table_number"] = payload.table_number
     result = await db.orders.find_one_and_update(
         {"id": order_id},
-        {"$set": {"status": payload.status, "updated_at": updated_at}},
+        {"$set": update_fields},
         return_document=True,
         projection={"_id": 0},
     )

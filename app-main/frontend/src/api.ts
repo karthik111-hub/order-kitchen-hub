@@ -75,6 +75,7 @@ export type Order = {
   payment?: Record<string, any> | null;
   table_number?: string | null;
   notes?: string | null;
+  chef_notes?: string | null;
   customer_id?: string | null;
   created_at: string;
   updated_at: string;
@@ -178,11 +179,15 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(r => handle<Order>(r)),
-  updateStatus: (id: string, status: OrderStatus) =>
+  updateStatus: (
+    id: string,
+    status: OrderStatus,
+    extra?: { chef_notes?: string; table_number?: string },
+  ) =>
     fetch(`${API}/orders/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, ...extra }),
     }).then(r => handle<Order>(r)),
   deleteOrder: (id: string) =>
     fetch(`${API}/orders/${id}`, { method: 'DELETE' }).then(r => handle<{ ok: boolean }>(r)),
