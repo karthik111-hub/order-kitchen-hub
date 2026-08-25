@@ -67,7 +67,7 @@ export default function LandingPage() {
               <Ionicons name="mail-outline" size={16} color={colors.onBrandPrimary} />
               <View style={styles.buttonContent}>
                 <Text style={styles.buttonTitle}>Contact Team</Text>
-                <Text style={styles.buttonSubtitle}>Get in touch</Text>
+                <Text style={styles.buttonSubtitle}>Get in touch{"\n"}Instagram: Krtheek</Text>
               </View>
             </Pressable>
 
@@ -84,7 +84,7 @@ export default function LandingPage() {
               <View style={styles.buttonContent}>
                 <Text style={[styles.buttonTitle, { color: colors.brand }]}>Recent Works</Text>
                 <Text style={[styles.buttonSubtitle, { color: colors.onSurfaceTertiary }]}>
-                  ServeSync
+                  KR Food Court Kitchen{"\n"}management app
                 </Text>
               </View>
             </Pressable>
