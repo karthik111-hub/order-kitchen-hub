@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as SecureStore from 'expo-secure-store';
 import { api, Role } from '@/src/api';
 import { colors, spacing, radius, type, shadow } from '@/src/theme';
 
@@ -108,20 +107,17 @@ export default function RoleSelect() {
     }
   };
 
-  const submitCustomer = async () => {
-    setSubmitting(true);
-    try {
-      const customerId = `customer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await SecureStore.setItemAsync('customerId', customerId);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setSelected(null);
-      router.replace('/krfoodcourt/customer' as any);
-    } catch (e: any) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError('Failed to create customer session');
-    } finally {
-      setSubmitting(false);
-    }
+  const submitCustomer = () => {
+    // customer/index.tsx creates (or reuses) the customer id itself via
+    // localStorage under 'serveSync_customerId' the moment it mounts, so
+    // there's nothing to set up here - just navigate. (This used to call
+    // SecureStore.setItemAsync, but expo-secure-store isn't backed by
+    // localStorage on web and throws there, which is what's actually
+    // deployed on Railway - the tap silently did nothing because the
+    // failure was only surfaced in an error banner that lives inside the
+    // password modal, which never opens for the Customer card.)
+    Haptics.selectionAsync();
+    router.push('/krfoodcourt/customer' as any);
   };
 
   return (
