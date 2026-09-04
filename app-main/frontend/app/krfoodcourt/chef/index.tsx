@@ -101,9 +101,16 @@ export default function ChefDashboard() {
           </Text>
         </View>
         <Pressable
+          testID="chef-sales-btn"
+          onPress={() => router.push('/krfoodcourt/chef/sales' as any)}
+          style={styles.headerBtn}
+        >
+          <Ionicons name="stats-chart-outline" size={14} color={colors.brand} />
+        </Pressable>
+        <Pressable
           testID="chef-switch-role-btn"
           onPress={() => router.replace('/' as any)}
-          style={styles.switchBtn}
+          style={styles.headerBtn}
         >
           <Ionicons name="swap-horizontal" size={14} color={colors.brand} />
         </Pressable>
@@ -249,10 +256,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   title: { fontSize: type.xxl, fontWeight: '800', color: colors.onSurface, letterSpacing: -0.5 },
   sub: { color: colors.muted, marginTop: 2, fontSize: type.sm },
-  switchBtn: {
+  headerBtn: {
     width: 30,
     height: 30,
     borderRadius: radius.pill,
