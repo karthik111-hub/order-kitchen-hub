@@ -20,16 +20,28 @@ const shortId = (id: string) => id.split('-').pop() || id.slice(0, 8);
 const getDateKey = (utcTime: string) => {
   try {
     const date = new Date(utcTime);
-    const formatter = new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    return formatter.format(date);
+    
+    // Get IST date (UTC+5:30)
+    const istTime = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+    const year = istTime.getUTCFullYear();
+    const month = String(istTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(istTime.getUTCDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   } catch (e) {
+    console.warn('Error parsing date:', utcTime, e);
     return '';
   }
+};
+
+const getTodayDateKey = () => {
+  const now = new Date();
+  const istTime = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  const year = istTime.getUTCFullYear();
+  const month = String(istTime.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(istTime.getUTCDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 };
 
 type DaySales = {
@@ -42,17 +54,27 @@ type DaySales = {
 
 const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales } => {
   const daily: Record<string, DaySales> = {};
+  const todayDateKey = getTodayDateKey();
+  
   let today: DaySales = {
-    date: new Date().toISOString().split('T')[0],
+    date: todayDateKey,
     totalOrders: 0,
     totalRevenue: 0,
     completedOrders: 0,
     pendingOrders: 0,
   };
 
+  console.log('Building daily sales from', orders.length, 'orders');
+  console.log('Today date key:', todayDateKey);
+
   for (const o of orders) {
     const dateKey = getDateKey(o.created_at);
-    if (!dateKey) continue;
+    if (!dateKey) {
+      console.warn('Failed to parse date for order:', o.id, o.created_at);
+      continue;
+    }
+
+    console.log('Order', o.id, 'date key:', dateKey, 'status:', o.status, 'total:', o.total);
 
     if (!daily[dateKey]) {
       daily[dateKey] = {
@@ -73,7 +95,8 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
     }
 
     // Update today if this order is from today
-    if (dateKey === today.date) {
+    if (dateKey === todayDateKey) {
+      console.log('Adding order to today:', o.id);
       today.totalOrders++;
       today.totalRevenue += o.total;
       if (o.status === 'completed') {
@@ -83,6 +106,9 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
       }
     }
   }
+
+  console.log('Today summary:', today);
+  console.log('Daily data:', daily);
 
   // Sort dates descending
   const sortedDaily = Object.values(daily).sort((a, b) => {
@@ -96,22 +122,31 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
 
 const getWeeklyData = (dailySales: DaySales[]) => {
   const week = [];
-  const today = new Date();
+  const now = new Date();
+  const istNow = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
   
   for (let i = 6; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split('T')[0];
+    const date = new Date(istNow);
+    date.setUTCDate(date.getUTCDate() - i);
+    
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     const dayData = dailySales.find(d => d.date === dateStr);
     
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayIndex = date.getUTCDay();
+    
     week.push({
-      day: dayNames[date.getDay()],
+      day: dayNames[dayIndex],
       revenue: dayData?.totalRevenue || 0,
       orders: dayData?.totalOrders || 0,
     });
   }
   
+  console.log('Weekly data:', week);
   return week;
 };
 
@@ -123,10 +158,15 @@ export default function SalesDashboard() {
 
   const load = useCallback(async () => {
     try {
+      console.log('Fetching all orders...');
       const data = await api.listOrders();
+      console.log('Fetched', data.length, 'orders');
+      data.forEach(o => {
+        console.log('Order:', o.id, 'created_at:', o.created_at, 'status:', o.status, 'total:', o.total);
+      });
       setAllOrders(data);
     } catch (e) {
-      console.warn(e);
+      console.error('Error loading orders:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -151,6 +191,8 @@ export default function SalesDashboard() {
   // Find max revenue for chart scaling
   const maxRevenue = Math.max(...weeklyData.map(w => w.revenue), 1);
   const chartHeight = 120;
+
+  console.log('Final render - today:', today, 'weekly:', weeklyData);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
