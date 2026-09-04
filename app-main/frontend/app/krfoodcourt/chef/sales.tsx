@@ -17,22 +17,6 @@ import { colors, radius, spacing, type, shadow } from '@/src/theme';
 
 const shortId = (id: string) => id.split('-').pop() || id.slice(0, 8);
 
-const formatDateIST = (utcTime: string) => {
-  try {
-    const date = new Date(utcTime);
-    const formatter = new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour12: false,
-    });
-    return formatter.format(date);
-  } catch (e) {
-    return '';
-  }
-};
-
 const getDateKey = (utcTime: string) => {
   try {
     const date = new Date(utcTime);
@@ -52,8 +36,6 @@ type DaySales = {
   date: string;
   totalOrders: number;
   totalRevenue: number;
-  paidRevenue: number;
-  unpaidRevenue: number;
   completedOrders: number;
   pendingOrders: number;
 };
@@ -64,8 +46,6 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
     date: new Date().toISOString().split('T')[0],
     totalOrders: 0,
     totalRevenue: 0,
-    paidRevenue: 0,
-    unpaidRevenue: 0,
     completedOrders: 0,
     pendingOrders: 0,
   };
@@ -79,8 +59,6 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
         date: dateKey,
         totalOrders: 0,
         totalRevenue: 0,
-        paidRevenue: 0,
-        unpaidRevenue: 0,
         completedOrders: 0,
         pendingOrders: 0,
       };
@@ -88,11 +66,6 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
 
     daily[dateKey].totalOrders++;
     daily[dateKey].totalRevenue += o.total;
-    if (o.payment_status === 'paid') {
-      daily[dateKey].paidRevenue += o.total;
-    } else {
-      daily[dateKey].unpaidRevenue += o.total;
-    }
     if (o.status === 'completed') {
       daily[dateKey].completedOrders++;
     } else {
@@ -103,11 +76,6 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
     if (dateKey === today.date) {
       today.totalOrders++;
       today.totalRevenue += o.total;
-      if (o.payment_status === 'paid') {
-        today.paidRevenue += o.total;
-      } else {
-        today.unpaidRevenue += o.total;
-      }
       if (o.status === 'completed') {
         today.completedOrders++;
       } else {
@@ -249,10 +217,12 @@ export default function SalesDashboard() {
 
               <View style={styles.summaryCard}>
                 <View style={styles.summaryIcon}>
-                  <Ionicons name="card-outline" size={20} color={colors.info} />
+                  <Ionicons name="trending-up-outline" size={20} color={colors.info} />
                 </View>
-                <Text style={styles.summaryValue}>₹{today.paidRevenue.toFixed(0)}</Text>
-                <Text style={styles.summaryLabel}>Paid Revenue</Text>
+                <Text style={styles.summaryValue}>
+                  {today.totalOrders > 0 ? (today.totalRevenue / today.totalOrders).toFixed(0) : 0}
+                </Text>
+                <Text style={styles.summaryLabel}>Avg Order Value</Text>
               </View>
             </View>
           </View>
@@ -328,17 +298,12 @@ export default function SalesDashboard() {
                       </View>
                     </View>
                   </View>
-                  <View style={styles.dailyPaidRow}>
-                    <View style={styles.revenueBreakdown}>
-                      <Text style={styles.revenueLabel}>
-                        Paid: <Text style={styles.revenueValue}>₹{day.paidRevenue.toFixed(0)}</Text>
+                  <View style={styles.dailyFooter}>
+                    <Text style={styles.avgOrderValue}>
+                      Avg: <Text style={styles.avgOrderValueBold}>
+                        ₹{day.totalOrders > 0 ? (day.totalRevenue / day.totalOrders).toFixed(0) : 0}
                       </Text>
-                      <Text style={styles.revenueLabel}>
-                        Unpaid: <Text style={[styles.revenueValue, { color: colors.warning }]}>
-                          ₹{day.unpaidRevenue.toFixed(0)}
-                        </Text>
-                      </Text>
-                    </View>
+                    </Text>
                   </View>
                 </View>
               ))
@@ -535,22 +500,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.success,
   },
-  dailyPaidRow: {
+  dailyFooter: {
     borderTopWidth: 1,
     borderTopColor: colors.divider,
     paddingTop: spacing.sm,
     marginTop: spacing.sm,
   },
-  revenueBreakdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  revenueLabel: {
+  avgOrderValue: {
     fontSize: type.sm,
     color: colors.muted,
   },
-  revenueValue: {
+  avgOrderValueBold: {
     fontWeight: '700',
     color: colors.brand,
   },
