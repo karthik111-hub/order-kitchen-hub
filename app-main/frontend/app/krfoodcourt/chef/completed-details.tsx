@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { api, Order } from '@/src/api';
 import { colors, radius, spacing, type, shadow } from '@/src/theme';
-
-const ITEM_COL_WIDTH = 130;
-const ORDER_COL_WIDTH = 78;
-const TOTAL_COL_WIDTH = 68;
 
 const shortId = (id: string) => id.split('-').pop() || id.slice(0, 8);
 
@@ -37,32 +33,6 @@ const formatTimeIST = (utcTime: string) => {
   } catch (e) {
     return '';
   }
-};
-
-type Matrix = {
-  orders: Order[];
-  itemNames: string[];
-  cells: Record<string, Record<string, number>>;
-  totals: Record<string, number>;
-  grandTotal: number;
-};
-
-const buildMatrix = (orders: Order[]): Matrix => {
-  const cells: Record<string, Record<string, number>> = {};
-  const totals: Record<string, number> = {};
-  const nameSet = new Set<string>();
-  let grand = 0;
-  for (const o of orders) {
-    for (const li of o.items) {
-      nameSet.add(li.name);
-      if (!cells[li.name]) cells[li.name] = {};
-      cells[li.name][o.id] = (cells[li.name][o.id] || 0) + li.quantity;
-      totals[li.name] = (totals[li.name] || 0) + li.quantity;
-      grand += li.quantity;
-    }
-  }
-  const itemNames = Array.from(nameSet).sort();
-  return { orders, itemNames, cells, totals, grandTotal: grand };
 };
 
 export default function ChefCompletedDetails() {
@@ -97,8 +67,6 @@ export default function ChefCompletedDetails() {
     load();
   }, [load]);
 
-  const matrix = useMemo(() => buildMatrix(orders), [orders]);
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -119,7 +87,7 @@ export default function ChefCompletedDetails() {
         <View style={styles.center}>
           <ActivityIndicator color={colors.brand} />
         </View>
-      ) : matrix.itemNames.length === 0 ? (
+      ) : orders.length === 0 ? (
         <View style={styles.center}>
           <View style={styles.emptyIcon}>
             <Ionicons name="checkmark-done-outline" size={26} color={colors.brand} />
@@ -142,108 +110,6 @@ export default function ChefCompletedDetails() {
             />
           }
         >
-          {/* Board Matrix Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Board Matrix</Text>
-            <View style={styles.legendRow}>
-              <View style={[styles.legendPill, { backgroundColor: '#E8F5E9' }]}>
-                <View style={[styles.dot, { backgroundColor: colors.success }]} />
-                <Text style={styles.legendText}>Completed</Text>
-              </View>
-              <Text style={styles.grandText}>Total items: {matrix.grandTotal}</Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator
-              contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}
-            >
-              <View testID="completed-matrix">
-                {/* Header row */}
-                <View style={styles.headerRow}>
-                  <View style={[styles.headerCell, { width: ITEM_COL_WIDTH }]}>
-                    <Text style={styles.headerCellText}>Item</Text>
-                  </View>
-                  {matrix.orders.map(o => (
-                    <View
-                      key={o.id}
-                      style={[
-                        styles.headerCell,
-                        {
-                          width: ORDER_COL_WIDTH,
-                          backgroundColor: '#E8F5E9',
-                        },
-                      ]}
-                      testID={`completed-col-${o.id}`}
-                    >
-                      <Text
-                        style={[
-                          styles.headerCellText,
-                          { color: colors.success },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        #{o.token_number}
-                      </Text>
-                      <Text style={styles.headerSubText} numberOfLines={1}>
-                        {shortId(o.id)}
-                      </Text>
-                      {o.table_number ? (
-                        <Text style={styles.headerSubText} numberOfLines={1}>
-                          T-{o.table_number}
-                        </Text>
-                      ) : null}
-                    </View>
-                  ))}
-                  <View
-                    style={[styles.headerCell, styles.totalCell, { width: TOTAL_COL_WIDTH }]}
-                  >
-                    <Text style={[styles.headerCellText, { color: colors.onBrandPrimary }]}>
-                      Total
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Item rows */}
-                <ScrollView>
-                  {matrix.itemNames.map((name, rowIdx) => (
-                    <View
-                      key={name}
-                      style={[
-                        styles.row,
-                        { backgroundColor: rowIdx % 2 === 0 ? colors.surfaceSecondary : '#FCFCFB' },
-                      ]}
-                      testID={`completed-row-${name}`}
-                    >
-                      <View style={[styles.itemCell, { width: ITEM_COL_WIDTH }]}>
-                        <Text style={styles.itemNameText} numberOfLines={2}>
-                          {name}
-                        </Text>
-                      </View>
-                      {matrix.orders.map(o => {
-                        const qty = matrix.cells[name]?.[o.id] || 0;
-                        return (
-                          <View
-                            key={o.id}
-                            style={[styles.qtyCell, { width: ORDER_COL_WIDTH }]}
-                          >
-                            {qty > 0 ? (
-                              <Text style={styles.qtyText}>{qty}</Text>
-                            ) : (
-                              <Text style={styles.dashText}>–</Text>
-                            )}
-                          </View>
-                        );
-                      })}
-                      <View style={[styles.qtyCell, styles.totalCell, { width: TOTAL_COL_WIDTH }]}>
-                        <Text style={styles.totalCellText}>{matrix.totals[name]}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            </ScrollView>
-          </View>
-
           {/* Order List Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Order Details</Text>
@@ -336,24 +202,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  legendPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-  },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  legendText: { color: colors.onSurfaceTertiary, fontSize: type.sm, fontWeight: '600' },
-  grandText: { color: colors.muted, fontSize: type.sm, fontWeight: '700', marginLeft: 'auto' },
-
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   emptyIcon: {
     width: 60,
@@ -371,52 +219,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: type.sm,
   },
-
-  headerRow: {
-    flexDirection: 'row',
-    borderTopLeftRadius: radius.md,
-    borderTopRightRadius: radius.md,
-    overflow: 'hidden',
-    ...shadow.soft,
-  },
-  headerCell: {
-    height: 48,
-    paddingHorizontal: spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: colors.divider,
-    backgroundColor: colors.surfaceTertiary,
-  },
-  headerCellText: { fontSize: type.sm, fontWeight: '800', color: colors.onSurface },
-  headerSubText: { fontSize: type.xs, color: colors.muted, marginTop: 1, fontWeight: '600' },
-
-  row: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  itemCell: {
-    height: 40,
-    paddingHorizontal: spacing.sm,
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: colors.divider,
-  },
-  itemNameText: { fontSize: type.sm, fontWeight: '700', color: colors.onSurface },
-  qtyCell: {
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: colors.divider,
-  },
-  qtyText: { fontSize: type.lg, fontWeight: '800', color: colors.onSurface },
-  dashText: { fontSize: type.base, color: colors.muted },
-  totalCell: {
-    backgroundColor: colors.brand,
-  },
-  totalCellText: { color: colors.onBrandPrimary, fontSize: type.lg, fontWeight: '800' },
 
   // Order Card Styles
   orderCard: {
