@@ -259,12 +259,10 @@ export default function SalesDashboard() {
 
               <View style={styles.summaryCard}>
                 <View style={styles.summaryIcon}>
-                  <Ionicons name="trending-up-outline" size={20} color={colors.info} />
+                  <Ionicons name="hourglass-outline" size={20} color={colors.info} />
                 </View>
-                <Text style={styles.summaryValue}>
-                  {today.totalOrders > 0 ? (today.totalRevenue / today.totalOrders).toFixed(0) : 0}
-                </Text>
-                <Text style={styles.summaryLabel}>Avg Order Value</Text>
+                <Text style={styles.summaryValue}>{today.pendingOrders}</Text>
+                <Text style={styles.summaryLabel}>Pending Orders</Text>
               </View>
             </View>
           </View>
@@ -309,47 +307,6 @@ export default function SalesDashboard() {
                 </View>
               ))}
             </View>
-          </View>
-
-          {/* Daily Sales List */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Daily Sales History</Text>
-            {daily.length === 0 ? (
-              <View style={styles.emptyBox}>
-                <Text style={styles.emptyText}>No sales data available</Text>
-              </View>
-            ) : (
-              daily.map((day) => (
-                <View key={day.date} style={styles.dailyCard}>
-                  <View style={styles.dailyHeader}>
-                    <View>
-                      <Text style={styles.dailyDate}>{day.date}</Text>
-                      <Text style={styles.dailyOrders}>{day.totalOrders} orders</Text>
-                    </View>
-                    <View style={styles.dailyRight}>
-                      <Text style={styles.dailyRevenue}>₹{day.totalRevenue.toFixed(0)}</Text>
-                      <View style={styles.dailyStats}>
-                        <View style={styles.statBadge}>
-                          <Text style={styles.statBadgeText}>✓ {day.completedOrders}</Text>
-                        </View>
-                        <View style={[styles.statBadge, { backgroundColor: colors.warning + '20' }]}>
-                          <Text style={[styles.statBadgeText, { color: colors.warning }]}>
-                            ⧖ {day.pendingOrders}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                  <View style={styles.dailyFooter}>
-                    <Text style={styles.avgOrderValue}>
-                      Avg: <Text style={styles.avgOrderValueBold}>
-                        ₹{day.totalOrders > 0 ? (day.totalRevenue / day.totalOrders).toFixed(0) : 0}
-                      </Text>
-                    </Text>
-                  </View>
-                </View>
-              ))
-            )}
           </View>
         </ScrollView>
       )}
@@ -493,79 +450,5 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
 
-  dailyCard: {
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.brand,
-    ...shadow.soft,
-  },
-  dailyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.sm,
-  },
-  dailyDate: {
-    fontSize: type.base,
-    fontWeight: '800',
-    color: colors.onSurface,
-  },
-  dailyOrders: {
-    fontSize: type.sm,
-    color: colors.muted,
-    marginTop: 4,
-  },
-  dailyRight: {
-    alignItems: 'flex-end',
-  },
-  dailyRevenue: {
-    fontSize: type.lg,
-    fontWeight: '800',
-    color: colors.brand,
-  },
-  dailyStats: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  statBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    backgroundColor: colors.success + '20',
-  },
-  statBadgeText: {
-    fontSize: type.xs,
-    fontWeight: '700',
-    color: colors.success,
-  },
-  dailyFooter: {
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    paddingTop: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  avgOrderValue: {
-    fontSize: type.sm,
-    color: colors.muted,
-  },
-  avgOrderValueBold: {
-    fontWeight: '700',
-    color: colors.brand,
-  },
-
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyBox: {
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: type.base,
-    color: colors.muted,
-  },
 });
