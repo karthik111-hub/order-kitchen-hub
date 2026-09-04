@@ -44,8 +44,38 @@ const getTodayDateKey = () => {
   return `${year}-${month}-${day}`;
 };
 
+const getMonthKey = (utcTime: string) => {
+  try {
+    const date = new Date(utcTime);
+    const istTime = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+    const year = istTime.getUTCFullYear();
+    const month = String(istTime.getUTCMonth() + 1).padStart(2, '0');
+    
+    return `${year}-${month}`;
+  } catch (e) {
+    return '';
+  }
+};
+
+const getCurrentMonthKey = () => {
+  const now = new Date();
+  const istTime = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  const year = istTime.getUTCFullYear();
+  const month = String(istTime.getUTCMonth() + 1).padStart(2, '0');
+  
+  return `${year}-${month}`;
+};
+
 type DaySales = {
   date: string;
+  totalOrders: number;
+  totalRevenue: number;
+  completedOrders: number;
+  pendingOrders: number;
+};
+
+type MonthlySales = {
+  month: string;
   totalOrders: number;
   totalRevenue: number;
   completedOrders: number;
@@ -64,17 +94,9 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
     pendingOrders: 0,
   };
 
-  console.log('Building daily sales from', orders.length, 'orders');
-  console.log('Today date key:', todayDateKey);
-
   for (const o of orders) {
     const dateKey = getDateKey(o.created_at);
-    if (!dateKey) {
-      console.warn('Failed to parse date for order:', o.id, o.created_at);
-      continue;
-    }
-
-    console.log('Order', o.id, 'date key:', dateKey, 'status:', o.status, 'total:', o.total);
+    if (!dateKey) continue;
 
     if (!daily[dateKey]) {
       daily[dateKey] = {
@@ -94,9 +116,7 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
       daily[dateKey].pendingOrders++;
     }
 
-    // Update today if this order is from today
     if (dateKey === todayDateKey) {
-      console.log('Adding order to today:', o.id);
       today.totalOrders++;
       today.totalRevenue += o.total;
       if (o.status === 'completed') {
@@ -107,10 +127,6 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
     }
   }
 
-  console.log('Today summary:', today);
-  console.log('Daily data:', daily);
-
-  // Sort dates descending
   const sortedDaily = Object.values(daily).sort((a, b) => {
     const dateA = new Date(a.date);
     const dateB = new Date(b.date);
@@ -118,6 +134,39 @@ const buildDailySales = (orders: Order[]): { daily: DaySales[]; today: DaySales 
   });
 
   return { daily: sortedDaily, today };
+};
+
+const buildMonthlySales = (orders: Order[]): MonthlySales[] => {
+  const monthly: Record<string, MonthlySales> = {};
+
+  for (const o of orders) {
+    const monthKey = getMonthKey(o.created_at);
+    if (!monthKey) continue;
+
+    if (!monthly[monthKey]) {
+      monthly[monthKey] = {
+        month: monthKey,
+        totalOrders: 0,
+        totalRevenue: 0,
+        completedOrders: 0,
+        pendingOrders: 0,
+      };
+    }
+
+    monthly[monthKey].totalOrders++;
+    monthly[monthKey].totalRevenue += o.total;
+    if (o.status === 'completed') {
+      monthly[monthKey].completedOrders++;
+    } else {
+      monthly[monthKey].pendingOrders++;
+    }
+  }
+
+  const sortedMonthly = Object.values(monthly).sort((a, b) => {
+    return b.month.localeCompare(a.month);
+  });
+
+  return sortedMonthly;
 };
 
 const getWeeklyData = (dailySales: DaySales[]) => {
@@ -146,8 +195,13 @@ const getWeeklyData = (dailySales: DaySales[]) => {
     });
   }
   
-  console.log('Weekly data:', week);
   return week;
+};
+
+const getMonthName = (monthKey: string) => {
+  const [year, month] = monthKey.split('-');
+  const date = new Date(`${year}-${month}-01`);
+  return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 };
 
 export default function SalesDashboard() {
@@ -158,12 +212,7 @@ export default function SalesDashboard() {
 
   const load = useCallback(async () => {
     try {
-      console.log('Fetching all orders...');
       const data = await api.listOrders();
-      console.log('Fetched', data.length, 'orders');
-      data.forEach(o => {
-        console.log('Order:', o.id, 'created_at:', o.created_at, 'status:', o.status, 'total:', o.total);
-      });
       setAllOrders(data);
     } catch (e) {
       console.error('Error loading orders:', e);
@@ -186,13 +235,13 @@ export default function SalesDashboard() {
   }, [load]);
 
   const { daily, today } = buildDailySales(allOrders);
+  const monthly = buildMonthlySales(allOrders);
   const weeklyData = getWeeklyData(daily);
   
   // Find max revenue for chart scaling
   const maxRevenue = Math.max(...weeklyData.map(w => w.revenue), 1);
+  const maxMonthlyRevenue = Math.max(...monthly.map(m => m.totalRevenue), 1);
   const chartHeight = 120;
-
-  console.log('Final render - today:', today, 'weekly:', weeklyData);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -308,6 +357,68 @@ export default function SalesDashboard() {
               ))}
             </View>
           </View>
+
+          {/* Monthly Chart */}
+          {monthly.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Monthly Revenue Trend</Text>
+              <View style={styles.chartContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator>
+                  <View style={styles.monthlyChart}>
+                    {monthly.map((m, idx) => (
+                      <View key={idx} style={styles.barContainer}>
+                        <View style={styles.barWrapper}>
+                          <View
+                            style={[
+                              styles.bar,
+                              {
+                                height: (m.totalRevenue / maxMonthlyRevenue) * chartHeight,
+                                backgroundColor: m.totalRevenue > 0 ? colors.brand : colors.surfaceSecondary,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.monthBarLabel}>{getMonthName(m.month)}</Text>
+                        {m.totalRevenue > 0 && (
+                          <Text style={styles.barValue}>₹{Math.round(m.totalRevenue)}</Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          )}
+
+          {/* Monthly Orders Breakdown */}
+          {monthly.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Monthly Orders Breakdown</Text>
+              {monthly.map((m) => (
+                <View key={m.month} style={styles.monthlyCard}>
+                  <View style={styles.monthlyHeader}>
+                    <View>
+                      <Text style={styles.monthlyDate}>{getMonthName(m.month)}</Text>
+                      <Text style={styles.monthlyOrders}>{m.totalOrders} orders</Text>
+                    </View>
+                    <View style={styles.monthlyRight}>
+                      <Text style={styles.monthlyRevenue}>₹{m.totalRevenue.toFixed(0)}</Text>
+                      <View style={styles.monthlyStats}>
+                        <View style={styles.statBadge}>
+                          <Text style={styles.statBadgeText}>✓ {m.completedOrders}</Text>
+                        </View>
+                        <View style={[styles.statBadge, { backgroundColor: colors.warning + '20' }]}>
+                          <Text style={[styles.statBadgeText, { color: colors.warning }]}>
+                            ⧖ {m.pendingOrders}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -394,9 +505,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     height: 160,
   },
+  monthlyChart: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    height: 160,
+    gap: spacing.md,
+    paddingRight: spacing.lg,
+  },
   barContainer: {
     alignItems: 'center',
     flex: 1,
+    minWidth: 50,
     gap: spacing.xs,
   },
   barWrapper: {
@@ -414,6 +534,12 @@ const styles = StyleSheet.create({
     fontSize: type.xs,
     fontWeight: '600',
     color: colors.muted,
+  },
+  monthBarLabel: {
+    fontSize: type.xs,
+    fontWeight: '600',
+    color: colors.muted,
+    textAlign: 'center',
   },
   barValue: {
     fontSize: type.xs,
@@ -448,6 +574,55 @@ const styles = StyleSheet.create({
   trendLabel: {
     fontSize: type.xs,
     color: colors.muted,
+  },
+
+  monthlyCard: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.brand,
+    ...shadow.soft,
+  },
+  monthlyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  monthlyDate: {
+    fontSize: type.base,
+    fontWeight: '800',
+    color: colors.onSurface,
+  },
+  monthlyOrders: {
+    fontSize: type.sm,
+    color: colors.muted,
+    marginTop: 4,
+  },
+  monthlyRight: {
+    alignItems: 'flex-end',
+  },
+  monthlyRevenue: {
+    fontSize: type.lg,
+    fontWeight: '800',
+    color: colors.brand,
+  },
+  monthlyStats: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  statBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.success + '20',
+  },
+  statBadgeText: {
+    fontSize: type.xs,
+    fontWeight: '700',
+    color: colors.success,
   },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
