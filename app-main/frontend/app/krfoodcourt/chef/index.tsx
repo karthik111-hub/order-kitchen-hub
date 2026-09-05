@@ -22,10 +22,10 @@ const ROW_HEIGHT = 40;
 const shortId = (id: string) => id.split('-').pop() || id.slice(0, 8);
 
 type Matrix = {
-  orders: Order[]; // columns
-  itemNames: string[]; // rows
-  cells: Record<string, Record<string, number>>; // itemName -> orderId -> qty
-  totals: Record<string, number>; // itemName -> total qty
+  orders: Order[];
+  itemNames: string[];
+  cells: Record<string, Record<string, number>>;
+  totals: Record<string, number>;
   grandTotal: number;
 };
 
@@ -83,7 +83,6 @@ export default function ChefDashboard() {
   }, [load]);
 
   const active = useMemo(() => {
-    // preparing first (in-progress), then pending, oldest first inside each
     const sortAsc = (a: Order, b: Order) =>
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     return [...preparing].sort(sortAsc).concat([...pending].sort(sortAsc));
@@ -100,6 +99,13 @@ export default function ChefDashboard() {
             {preparing.length} preparing · {pending.length} pending
           </Text>
         </View>
+        <Pressable
+          testID="chef-place-order-btn"
+          onPress={() => router.push('/krfoodcourt/chef/place-order' as any)}
+          style={styles.headerBtn}
+        >
+          <Ionicons name="add-circle-outline" size={14} color={colors.brand} />
+        </Pressable>
         <Pressable
           testID="chef-sales-btn"
           onPress={() => router.push('/krfoodcourt/chef/sales' as any)}
