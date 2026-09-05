@@ -52,7 +52,7 @@ export default function ChefPlaceOrder() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.listMenu();
+      const data = await api.listMenu(undefined, false);
       setItems(data);
     } catch (e: any) {
       console.warn('Menu load failed', e?.message);
