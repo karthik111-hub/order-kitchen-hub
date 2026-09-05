@@ -102,9 +102,9 @@ export default function ChefDashboard() {
         <Pressable
           testID="chef-place-order-btn"
           onPress={() => router.push('/krfoodcourt/chef/place-order' as any)}
-          style={styles.headerBtn}
+          style={styles.placeOrderBtn}
         >
-          <Ionicons name="add-circle-outline" size={14} color={colors.brand} />
+          <Ionicons name="add" size={18} color={colors.onBrandPrimary} />
         </Pressable>
         <Pressable
           testID="chef-sales-btn"
@@ -271,6 +271,14 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: radius.pill,
     backgroundColor: colors.brandTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeOrderBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.pill,
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
