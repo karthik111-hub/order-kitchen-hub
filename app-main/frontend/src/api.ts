@@ -1,28 +1,27 @@
 // Determine backend URL dynamically at runtime (not build time)
 function getBackendUrl(): string {
-  // Try environment variable first (for build-time override)
+  // Try environment variable first - REQUIRED for cross-domain Railway deployments
   const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
   if (envUrl) {
-    console.log('[API-CONFIG] Using env var EXPO_PUBLIC_BACKEND_URL:', envUrl);
-    return envUrl;
+    const url = envUrl.trim();
+    console.log('[API-CONFIG] Using EXPO_PUBLIC_BACKEND_URL:', url);
+    return url;
   }
 
-  // Fallback: detect based on runtime hostname
+  console.error('[API-CONFIG] ERROR: EXPO_PUBLIC_BACKEND_URL not set - backend calls will fail on production');
+  
+  // Fallback for local development only
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    console.log('[API-CONFIG] Runtime hostname:', hostname);
     
-    // If NOT localhost, assume we're on Railway/production
-    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      const prodUrl = `https://${hostname}`;
-      console.log('[API-CONFIG] Production URL detected:', prodUrl);
-      return prodUrl;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      console.log('[API-CONFIG] Using localhost fallback for development');
+      return 'http://127.0.0.1:8006';
     }
   }
 
-  // Local fallback
-  console.log('[API-CONFIG] Using localhost fallback');
-  return 'http://127.0.0.1:8006';
+  // Production without env var - this will fail
+  throw new Error('EXPO_PUBLIC_BACKEND_URL environment variable must be set for production deployments');
 }
 
 const BACKEND_URL = getBackendUrl();
@@ -246,6 +245,3 @@ export const api = {
     return `${API}/reports/daily.xlsx${q}`;
   },
 };
-
-
-
