@@ -42,6 +42,7 @@ export default function ChefPlaceOrder() {
   const [refreshing, setRefreshing] = useState(false);
   const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
   const [cartOpen, setCartOpen] = useState(false);
+  const [miscModalOpen, setMiscModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [tableNumber, setTableNumber] = useState('');
@@ -138,6 +139,8 @@ export default function ChefPlaceOrder() {
     });
     setMiscName('');
     setMiscPrice('');
+    setMiscModalOpen(false);
+    Haptics.selectionAsync();
   };
 
   const { categories, sections } = useMemo(() => {
@@ -161,13 +164,17 @@ export default function ChefPlaceOrder() {
     const rows: Array<
       | { type: 'header'; category: string; count: number }
       | { type: 'item'; item: MenuItem }
+      | { type: 'miscButton' }
     > = [];
     sections.forEach(sec => {
       rows.push({ type: 'header', category: sec.category, count: sec.items.length });
       sec.items.forEach(item => rows.push({ type: 'item', item }));
     });
+    if (items.length > 0) {
+      rows.push({ type: 'miscButton' });
+    }
     return rows;
-  }, [sections]);
+  }, [sections, items.length]);
 
   const lines = Array.from(cart.values());
   const totalQty = lines.reduce((sum, item) => sum + item.quantity, 0);
@@ -210,6 +217,25 @@ export default function ChefPlaceOrder() {
         </View>
       );
     }
+
+    if (row.type === 'miscButton') {
+      return (
+        <Pressable
+          onPress={() => setMiscModalOpen(true)}
+          style={styles.miscButtonRow}
+        >
+          <View style={styles.miscButtonIcon}>
+            <Ionicons name="add-circle" size={28} color={colors.brand} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.miscButtonTitle}>Add Miscellaneous Item</Text>
+            <Text style={styles.miscButtonSub}>Add custom items with pricing</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+        </Pressable>
+      );
+    }
+
     const item = row.item;
     const inCart = cart.get(item.id);
     return (
@@ -343,9 +369,11 @@ export default function ChefPlaceOrder() {
       ) : (
         <FlatList
           data={flatData}
-          keyExtractor={(row, idx) =>
-            row.type === 'header' ? `h-${row.category}` : `i-${row.item.id}-${idx}`
-          }
+          keyExtractor={(row, idx) => {
+            if (row.type === 'header') return `h-${row.category}`;
+            if (row.type === 'miscButton') return 'misc-btn';
+            return `i-${row.item.id}-${idx}`;
+          }}
           renderItem={renderRow}
           contentContainerStyle={{
             paddingHorizontal: spacing.lg,
@@ -386,6 +414,7 @@ export default function ChefPlaceOrder() {
         </View>
       )}
 
+      {/* Cart Review Modal */}
       <Modal
         visible={cartOpen}
         animationType="slide"
@@ -446,31 +475,6 @@ export default function ChefPlaceOrder() {
               multiline
             />
 
-            {/* Misc Item Section */}
-            <View style={styles.miscSection}>
-              <Text style={styles.miscTitle}>Add Misc Item</Text>
-              <TextInput
-                placeholder="Item name"
-                value={miscName}
-                onChangeText={setMiscName}
-                style={[styles.input, { marginBottom: spacing.sm }]}
-              />
-              <TextInput
-                placeholder="Price"
-                value={miscPrice}
-                onChangeText={setMiscPrice}
-                keyboardType="decimal-pad"
-                style={[styles.input, { marginBottom: spacing.sm }]}
-              />
-              <Pressable
-                onPress={addMiscItem}
-                style={styles.addMiscBtn}
-              >
-                <Ionicons name="add" size={16} color={colors.onBrandPrimary} />
-                <Text style={styles.addMiscBtnText}>Add to Order</Text>
-              </Pressable>
-            </View>
-
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>₹{totalPrice.toFixed(0)}</Text>
@@ -490,6 +494,64 @@ export default function ChefPlaceOrder() {
                 </>
               )}
             </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Add Misc Item Modal */}
+      <Modal
+        visible={miscModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setMiscModalOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalRoot}
+        >
+          <Pressable style={styles.backdrop} onPress={() => setMiscModalOpen(false)} />
+          <View style={styles.sheet}>
+            <View style={styles.handle} />
+            <Text style={styles.sheetTitle}>Add Misc Item</Text>
+
+            <TextInput
+              placeholder="Item name"
+              value={miscName}
+              onChangeText={setMiscName}
+              style={styles.input}
+              placeholderTextColor={colors.muted}
+            />
+            <TextInput
+              placeholder="Price"
+              value={miscPrice}
+              onChangeText={setMiscPrice}
+              keyboardType="decimal-pad"
+              style={styles.input}
+              placeholderTextColor={colors.muted}
+            />
+
+            <View style={styles.miscDescBox}>
+              <Ionicons name="information-circle" size={16} color={colors.brand} />
+              <Text style={styles.miscDesc}>
+                Enter the custom item name and price, then tap "Add to Cart"
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.md }}>
+              <Pressable
+                onPress={() => setMiscModalOpen(false)}
+                style={[styles.placeBtn, { flex: 1, backgroundColor: colors.muted }]}
+              >
+                <Text style={[styles.placeBtnText, { color: colors.onSurface }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={addMiscItem}
+                style={[styles.placeBtn, { flex: 1 }]}
+              >
+                <Ionicons name="add" size={14} color={colors.onBrandPrimary} />
+                <Text style={styles.placeBtnText}>Add to Cart</Text>
+              </Pressable>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -596,6 +658,34 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     marginBottom: spacing.sm,
     ...shadow.soft,
+  },
+  miscButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.brandTertiary,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.sm,
+    ...shadow.soft,
+  },
+  miscButtonIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miscButtonTitle: {
+    fontSize: type.base,
+    fontWeight: '700',
+    color: colors.onSurface,
+  },
+  miscButtonSub: {
+    fontSize: type.sm,
+    color: colors.muted,
+    marginTop: 2,
   },
   rowImage: {
     width: thumb.md,
@@ -728,31 +818,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     fontSize: type.base,
   },
-  miscSection: {
-    backgroundColor: colors.surfaceTertiary,
+  miscDescBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.brandTertiary,
     padding: spacing.md,
     borderRadius: radius.md,
-    marginBottom: spacing.sm,
+    marginTop: spacing.md,
   },
-  miscTitle: {
+  miscDesc: {
+    flex: 1,
     fontSize: type.sm,
-    fontWeight: '800',
     color: colors.onSurface,
-    marginBottom: spacing.sm,
-  },
-  addMiscBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.brand,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-  },
-  addMiscBtnText: {
-    color: colors.onBrandPrimary,
-    fontWeight: '700',
-    fontSize: type.sm,
+    fontWeight: '600',
   },
   totalRow: {
     flexDirection: 'row',
