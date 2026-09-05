@@ -73,14 +73,15 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    # The frontend never sends cookies/auth credentials, so allow_credentials
-    # is left off. Per the CORS spec, allow_credentials=True cannot be
-    # combined with a wildcard allow_origins in browsers anyway.
     allow_credentials=False,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
+
+logger.info("CORS middleware configured to allow all origins")
 
 api_router = APIRouter(prefix="/api")
 
